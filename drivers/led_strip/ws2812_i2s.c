@@ -66,7 +66,7 @@ static inline void ws2812_i2s_ser(uint32_t *word, uint8_t color, const uint8_t s
 	/* Swap the two I2S values due to the (audio) channel TX order. */
 	*word = (*word >> 16) | (*word << 16);
 }
-
+static int ws2812_i2s_init(const struct device *dev); // MP EDIT
 static int ws2812_strip_update_rgb(const struct device *dev, struct led_rgb *pixels,
 				   size_t num_pixels)
 {
@@ -142,6 +142,7 @@ static int ws2812_strip_update_rgb(const struct device *dev, struct led_rgb *pix
 	if (ret < 0) {
 		k_mem_slab_free(cfg->mem_slab, mem_block);
 		LOG_ERR("Failed to write data: %d", ret);
+		ws2812_i2s_init(cfg->dev); /// MP EDIT
 		return ret;
 	}
 
