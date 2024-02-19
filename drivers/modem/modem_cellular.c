@@ -438,7 +438,6 @@ MODEM_CHAT_MATCH_DEFINE(imei_match, "", "", modem_cellular_chat_on_imei);
 MODEM_CHAT_MATCH_DEFINE(cgmm_match, "", "", modem_cellular_chat_on_cgmm);
 MODEM_CHAT_MATCH_DEFINE(csq_match, "+CSQ: ", ",", modem_cellular_chat_on_csq);
 MODEM_CHAT_MATCH_DEFINE(cesq_match, "+CESQ: ", ",", modem_cellular_chat_on_cesq);
-MODEM_CHAT_MATCH_DEFINE(qccid_match __maybe_unused, "+QCCID: ", "", modem_cellular_chat_on_iccid);
 MODEM_CHAT_MATCH_DEFINE(iccid_match __maybe_unused, "+ICCID: ", "", modem_cellular_chat_on_iccid);
 MODEM_CHAT_MATCH_DEFINE(cimi_match __maybe_unused, "", "", modem_cellular_chat_on_imsi);
 MODEM_CHAT_MATCH_DEFINE(cgmi_match __maybe_unused, "", "", modem_cellular_chat_on_cgmi);
@@ -1420,35 +1419,6 @@ static int modem_cellular_get_modem_info(const struct device *dev,
 		break;
 	case CELLULAR_MODEM_INFO_SIM_ICCID:
 		strncpy(info, &data->iccid[0], MIN(size, sizeof(data->iccid)));
-		break;
-	default:
-		ret = -ENODATA;
-		break;
-	}
-
-	return ret;
-}
-static int modem_cellular_get_registration_status(const struct device *dev,
-						  enum cellular_access_technology tech,
-						  enum cellular_registration_status *status)
-{
-	int ret = 0;
-	struct modem_cellular_data *data = (struct modem_cellular_data *)dev->data;
-
-	switch (tech) {
-	case CELLULAR_ACCESS_TECHNOLOGY_GSM:
-		*status = data->registration_status_gsm;
-		break;
-	case CELLULAR_ACCESS_TECHNOLOGY_GPRS:
-	case CELLULAR_ACCESS_TECHNOLOGY_UMTS:
-	case CELLULAR_ACCESS_TECHNOLOGY_EDGE:
-		*status = data->registration_status_gprs;
-		break;
-	case CELLULAR_ACCESS_TECHNOLOGY_LTE:
-	case CELLULAR_ACCESS_TECHNOLOGY_LTE_CAT_M1:
-	case CELLULAR_ACCESS_TECHNOLOGY_LTE_CAT_M2:
-	case CELLULAR_ACCESS_TECHNOLOGY_NB_IOT:
-		*status = data->registration_status_lte;
 		break;
 	default:
 		ret = -ENODATA;
