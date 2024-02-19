@@ -438,6 +438,7 @@ MODEM_CHAT_MATCH_DEFINE(imei_match, "", "", modem_cellular_chat_on_imei);
 MODEM_CHAT_MATCH_DEFINE(cgmm_match, "", "", modem_cellular_chat_on_cgmm);
 MODEM_CHAT_MATCH_DEFINE(csq_match, "+CSQ: ", ",", modem_cellular_chat_on_csq);
 MODEM_CHAT_MATCH_DEFINE(cesq_match, "+CESQ: ", ",", modem_cellular_chat_on_cesq);
+MODEM_CHAT_MATCH_DEFINE(qccid_match __maybe_unused, "+QCCID: ", "", modem_cellular_chat_on_iccid);
 MODEM_CHAT_MATCH_DEFINE(iccid_match __maybe_unused, "+ICCID: ", "", modem_cellular_chat_on_iccid);
 MODEM_CHAT_MATCH_DEFINE(cimi_match __maybe_unused, "", "", modem_cellular_chat_on_imsi);
 MODEM_CHAT_MATCH_DEFINE(cgmi_match __maybe_unused, "", "", modem_cellular_chat_on_cgmi);
