@@ -610,6 +610,87 @@ ZTEST(modem_chat, test_script_run_dynamic_script_sync)
 	zassert_ok(modem_chat_run_script(&cmd, &stack_script), "Failed to run script");
 }
 
+ZTEST(modem_chat, test_script_chat_timeout_cmd)
+{
+	int ret;
+	bool called;
+
+	zassert_ok(modem_chat_run_script_async(&cmd, &script_timeout_cmd),
+		   "Failed to start script");
+	k_msleep(100);
+
+	/*
+	 * Script sends "AT\r\n";
+	 */
+	ret = modem_backend_mock_get(&mock, buffer, ARRAY_SIZE(buffer));
+	zassert_equal(ret, sizeof("AT\r\n") - 1);
+	zassert_true(memcmp(buffer, "AT\r\n", sizeof("AT\r\n") - 1) == 0,
+		     "Request not sent as expected");
+
+	/*
+	 * Modem responds OK
+	 */
+	modem_backend_mock_put(&mock, ok_response, sizeof(ok_response) - 1);
+
+	/*
+	 * Script waits 4 seconds
+	 */
+	k_msleep(3000);
+	zassert_equal(modem_backend_mock_get(&mock, buffer, ARRAY_SIZE(buffer)), 0);
+	k_msleep(2000);
+
+	/*
+	 * Script sends "AT\r\n";
+	 */
+	ret = modem_backend_mock_get(&mock, buffer, ARRAY_SIZE(buffer));
+	zassert_equal(ret, sizeof("AT\r\n") - 1);
+	zassert_true(memcmp(buffer, "AT\r\n", sizeof("AT\r\n") - 1) == 0,
+		     "Request not sent as expected");
+
+	/*
+	 * Modem responds OK
+	 */
+	modem_backend_mock_put(&mock, ok_response, sizeof(ok_response) - 1);
+	k_msleep(100);
+
+	called = atomic_test_bit(&callback_called, MODEM_CHAT_UTEST_ON_SCRIPT_CALLBACK_BIT);
+	zassert_true(called == true, "Script callback should have been called");
+	zassert_equal(script_result, MODEM_CHAT_SCRIPT_RESULT_SUCCESS,
+		      "Script should have stopped with success");
+
+	/* Assert no data was sent except the request */
+	zassert_equal(modem_backend_mock_get(&mock, buffer, ARRAY_SIZE(buffer)), 0,
+		      "Script sent too many requests");
+}
+
+ZTEST(modem_chat, test_runtime_match)
+{
+	int ret;
+	struct modem_chat_match test_match;
+
+	modem_chat_match_init(&test_match);
+
+	ret = modem_chat_match_set_match(&test_match, "AT345");
+	zassert_ok(ret, "Failed to set match");
+	zassert_ok(strcmp(test_match.match, "AT345"), "Failed to set match");
+	zassert_equal(test_match.match_size, 5, "Failed to set size of match");
+
+	ret = modem_chat_match_set_separators(&test_match, ",*");
+	zassert_ok(ret, "Failed to set match");
+	zassert_ok(strcmp(test_match.separators, ",*"), "Failed to set separators");
+	zassert_equal(test_match.separators_size, 2, "Failed to set size of separators");
+
+	modem_chat_match_set_partial(&test_match, true);
+	zassert_equal(test_match.partial, true);
+	modem_chat_match_set_partial(&test_match, false);
+	zassert_equal(test_match.partial, false);
+
+	modem_chat_match_enable_wildcards(&test_match, true);
+	zassert_equal(test_match.wildcards, true);
+	modem_chat_match_enable_wildcards(&test_match, false);
+	zassert_equal(test_match.wildcards, false);
+}
+
 /*************************************************************************************************/
 /*                                         Test suite                                            */
 /*************************************************************************************************/
