@@ -38,27 +38,12 @@
  * EC clock frequency (PWM and tachometer driver need it to reply
  * to api or calculate RPM)
  */
-#ifdef CONFIG_SOC_IT8XXX2_EC_BUS_24MHZ
-#define EC_FREQ			MHZ(24)
-#else
 #define EC_FREQ			MHZ(8)
 
-#endif
 
 /* --- General Control (GCTRL) --- */
 #define IT8XXX2_GCTRL_BASE      0x00F02000
 #define IT8XXX2_GCTRL_EIDSR     ECREG(IT8XXX2_GCTRL_BASE + 0x31)
-
-/* --- External GPIO Control (EGPIO) --- */
-#define IT8XXX2_EGPIO_BASE      0x00F02100
-#define IT8XXX2_EGPIO_EGCR      ECREG(IT8XXX2_EGPIO_BASE + 0x04)
-
-/* EGPIO register fields */
-/*
- * 0x04: External GPIO Control
- * BIT(4): EXGPIO EGAD Pin Output Driving Disable
- */
-#define IT8XXX2_EGPIO_EEPODD    BIT(4)
 
 /**
  *
@@ -407,7 +392,7 @@ enum ext_clk_src_sel {
 	EXT_PSR_32P768K = 0,
 	EXT_PSR_1P024K,
 	EXT_PSR_32,
-	EXT_PSR_EC_CLK,
+	EXT_PSR_8M,
 };
 /*
  * 24-bit timers: external timer 3, 5, and 7
@@ -492,25 +477,11 @@ enum usb_dc_endpoints {
 	EP12,
 	EP13,
 	EP14,
-	EP15,
-	MAX_NUM_ENDPOINTS
+	EP15
 };
 
-union ep_ctrl_reg {
-	volatile uint8_t value;
-	struct {
-		volatile uint8_t enable_bit: 1;
-		volatile uint8_t ready_bit: 1;
-		volatile uint8_t outdata_sequence_bit: 1;
-		volatile uint8_t send_stall_bit: 1;
-		volatile uint8_t iso_enable_bit: 1;
-		volatile uint8_t direction_bit: 1;
-		volatile uint8_t reserved: 2;
-	} __packed fields;
-} __packed;
-
 struct it82xx2_usb_ep_regs {
-	union ep_ctrl_reg ep_ctrl;
+	volatile uint8_t ep_ctrl;
 	volatile uint8_t ep_status;
 	volatile uint8_t ep_transtype_sts;
 	volatile uint8_t ep_nak_transtype_sts;
@@ -559,20 +530,6 @@ struct ep_ext_regs_7x {
  * the EP6 and EP7 share the same one, and the rest EPs are defined in the
  * same way.
  */
-union epn0n1_extend_ctrl_reg {
-	volatile uint8_t value;
-	struct {
-		volatile uint8_t epn0_outdata_sequence_bit: 1;
-		volatile uint8_t epn0_send_stall_bit: 1;
-		volatile uint8_t epn0_iso_enable_bit: 1;
-		volatile uint8_t reserved0: 1;
-		volatile uint8_t epn1_outdata_sequence_bit: 1;
-		volatile uint8_t epn1_send_stall_bit: 1;
-		volatile uint8_t epn1_iso_enable_bit: 1;
-		volatile uint8_t reserved1: 1;
-	} __packed fields;
-} __packed;
-
 struct ep_ext_regs_9x {
 	/* 0x95 Reserved */
 	volatile uint8_t ep_ext_ctrl_95;
@@ -581,7 +538,7 @@ struct ep_ext_regs_9x {
 	/* 0x97 Reserved */
 	volatile uint8_t ep_ext_ctrl_97;
 	/* 0x98 ~ 0x9D EP45/67/89/1011/1213/1415 Extended Control Registers */
-	union epn0n1_extend_ctrl_reg epn0n1_ext_ctrl[6];
+	volatile uint8_t epn0n1_ext_ctrl[6];
 	/* 0x9E Reserved */
 	volatile uint8_t ep_ext_ctrl_9e;
 	/* 0x9F Reserved */
@@ -644,23 +601,9 @@ struct ep_ext_regs_bx {
  * We classify them into 4 groups which each of them contains Control 1 and 2
  * according to the EP number as follows:
  */
-union epn_extend_ctrl1_reg {
-	volatile uint8_t value;
-	struct {
-		volatile uint8_t epn0_enable_bit: 1;
-		volatile uint8_t epn0_direction_bit: 1;
-		volatile uint8_t epn3_enable_bit: 1;
-		volatile uint8_t epn3_direction_bit: 1;
-		volatile uint8_t epn6_enable_bit: 1;
-		volatile uint8_t epn6_direction_bit: 1;
-		volatile uint8_t epn9_enable_bit: 1;
-		volatile uint8_t epn9_direction_bit: 1;
-	} __packed fields;
-} __packed;
-
 struct epn_ext_ctrl_regs {
 	/* 0xD6/0xD8/0xDA/0xDC EPN Extended Control1 Register */
-	union epn_extend_ctrl1_reg epn_ext_ctrl1;
+	volatile uint8_t epn_ext_ctrl1;
 	/* 0xD7/0xD9/0xDB/0xDD EPB Extended Control2 Register */
 	volatile uint8_t epn_ext_ctrl2;
 };
@@ -711,13 +654,6 @@ struct it82xx2_usb_ep_fifo_regs {
 	};
 
 };
-
-/* USB Control registers */
-#define USB_IT82XX2_REGS_BASE \
-	((struct usb_it82xx2_regs *)DT_REG_ADDR(DT_NODELABEL(usb0)))
-
-/* Bit definitions of the register Port0/Port1 MISC Control: 0XE4/0xE8 */
-#define PULL_DOWN_EN	BIT(4)
 
 struct usb_it82xx2_regs {
 	/* 0x00:  Host TX Contrl Register */
@@ -1084,11 +1020,6 @@ struct gpio_it8xxx2_regs {
 #define IT8XXX2_GPIO_GPH1VS                BIT(1)
 #define IT8XXX2_GPIO_GPH2VS                BIT(0)
 
-#define KSIX_KSOX_KBS_GPIO_MODE     BIT(7)
-#define KSIX_KSOX_GPIO_OUTPUT       BIT(6)
-#define KSIX_KSOX_GPIO_PULLUP       BIT(2)
-#define KSIX_KSOX_GPIO_PULLDOWN     BIT(1)
-
 #define GPCR_PORT_PIN_MODE_INPUT    BIT(7)
 #define GPCR_PORT_PIN_MODE_OUTPUT   BIT(6)
 #define GPCR_PORT_PIN_MODE_PULLUP   BIT(2)
@@ -1185,10 +1116,6 @@ struct adc_it8xxx2_regs {
 	struct adc_vchs_ctrl_t adc_vchs_ctrl[4];
 	/* 0x6c: ADC Data Valid Status 2 */
 	volatile uint8_t ADCDVSTS2;
-	/* 0x6d-0xef: Reserved4 */
-	volatile uint8_t reserved4[131];
-	/* 0xf0: ADC Clock Control Register 1 */
-	volatile uint8_t ADCCTL1;
 };
 #endif /* !__ASSEMBLER__ */
 

@@ -7,8 +7,7 @@
 #ifndef _SIFIVE_FU540_PRCI_H
 #define _SIFIVE_FU540_PRCI_H
 
-/* Clock controller. */
-#define PRCI_BASE_ADDR 0x10000000UL
+#include <soc.h>
 
 #define Z_REG32(p, i) (*(volatile uint32_t *) ((p) + (i)))
 #define PRCI_REG(offset) Z_REG32(PRCI_BASE_ADDR, offset)

@@ -1984,8 +1984,6 @@ static const struct bt_mesh_test_cfg solicit_trigger_cfg = {
 static void test_tx_proxy_adv_solicit_trigger(void)
 {
 	tx_proxy_adv_common_init(PROXY_ADV_MULTI_SUBNET_COEX_WAIT_TIME, &solicit_trigger_cfg);
-	/* Disable SNB. */
-	bt_mesh_beacon_set(false);
 	ASSERT_OK_MSG(bt_mesh_subnet_add(TEST_NET_IDX2, test_net_key_2),
 		      "Failed to add second subnet");
 
@@ -2003,8 +2001,6 @@ static void test_tx_proxy_adv_solicit_trigger(void)
 static void test_rx_proxy_adv_multi_subnet_coex(void)
 {
 	rx_priv_common_init(PROXY_ADV_MULTI_SUBNET_COEX_WAIT_TIME);
-	/* Disable SNB. */
-	bt_mesh_beacon_set(false);
 	pp_netkey_ctx_init(&pp_net1);
 	pp_netkey_ctx_init(&pp_net2);
 
@@ -2048,17 +2044,17 @@ static void test_rx_proxy_adv_multi_subnet_coex(void)
 		/** The first and second subnet gets solicited. Check that
 		 *  PRIVATE_NET_ID is advertised by these subnet,
 		 */
-		{.evt_type = BEACON_TYPE_PRIVATE_NET_ID, .net_idx = 0, .evt_cnt = 8,
+		{.evt_type = BEACON_TYPE_PRIVATE_NET_ID, .net_idx = 0, .evt_cnt = 9,
 		 .time = {.after = PROXY_ADV_MULTI_CHECKPOINT_3,
 			  .before = PROXY_ADV_MULTI_CHECKPOINT_4}},
-		{.evt_type = BEACON_TYPE_PRIVATE_NET_ID, .net_idx = 1, .evt_cnt = 8,
+		{.evt_type = BEACON_TYPE_PRIVATE_NET_ID, .net_idx = 1, .evt_cnt = 9,
 		 .time = {.after = PROXY_ADV_MULTI_CHECKPOINT_3,
 			  .before = PROXY_ADV_MULTI_CHECKPOINT_4}},
 
 		/** Second and third subnet are disabled. Verify that the single
 		 *  subnet has exclusive access to the adv medium.
 		 */
-		{.evt_type = BEACON_TYPE_NET_ID, .net_idx = 0, .evt_cnt = 18,
+		{.evt_type = BEACON_TYPE_NET_ID, .net_idx = 0, .evt_cnt = 19,
 		 .time = {.after = PROXY_ADV_MULTI_CHECKPOINT_4,
 			  .before = PROXY_ADV_MULTI_CHECKPOINT_END}},
 	};

@@ -24,9 +24,12 @@ config 2ND_LVL_INTR_00_OFFSET
 	default 11
 
 config MAX_IRQ_PER_AGGREGATOR
-	default 186
+	default 30
 
 config NUM_IRQS
-	default 186
+	default 187
+
+# config NO_OPTIMIZATIONS
+#	default y
 
 endif # SOC_SERIES_POLARFIRE

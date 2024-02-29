@@ -125,6 +125,12 @@ Bluetooth
     the transmitted responses on the Access layer.
     The functionality is enabled by the :kconfig:option:`CONFIG_BT_MESH_ACCESS_DELAYABLE_MSG`
     Kconfig option.
+  * The Bluetooth Mesh Protocol 1.1 is now supported by default.
+
+  * Added the delayable messages functionality to apply random delays for
+    the transmitted responses on the Access layer.
+    The functionality is enabled by the :kconfig:option:`CONFIG_BT_MESH_ACCESS_DELAYABLE_MSG`
+    Kconfig option.
   * The Bluetooth Mesh protocol 1.1 is now supported by default.
 
 * Controller
@@ -486,6 +492,9 @@ Drivers and Sensors
 
   * Removed :kconfig:option:`CONFIG_IEEE802154_SELECTIVE_TXPOWER` Kconfig option.
 
+* Interrupt Controller
+  * Removed :kconfig:option:`CONFIG_IEEE802154_SELECTIVE_TXPOWER` Kconfig option.
+
 * Input
 
   * The ``short-codes`` property of :dtcompatible:`zephyr,input-longpress` is
@@ -696,6 +705,11 @@ Networking
 **********
 
 * CoAP:
+
+  * Added new API functions:
+
+    * :c:func:`coap_get_transmission_parameters`
+    * :c:func:`coap_set_transmission_parameters`
 
   * Added support for Echo and Request-Tag CoAP options (RFC 9175).
   * Changed :c:func:`coap_remove_observer` API function return type to bool.

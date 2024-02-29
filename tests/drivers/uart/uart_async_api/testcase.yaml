@@ -13,6 +13,7 @@ tests:
     harness_config:
       fixture: gpio_loopback
     depends_on: gpio
+    tags: bsim_skip_CI
   drivers.uart.wide:
     filter: CONFIG_SERIAL_SUPPORT_ASYNC and not CONFIG_UART_MCUX_LPUART
     harness: ztest
