@@ -25,6 +25,15 @@ BUILD_ASSERT(IS_ENABLED(_CONCAT(CONFIG_, _CONCAT(NRFX_GPIOTE, GPIOTE_INST))),
 	"NRFX_GPIOTE" STRINGIFY(GPIOTE_INST) " must be enabled in Kconfig");
 
 
+#define GPIOTE_INST	NRF_DT_GPIOTE_INST(DT_ALIAS(sw0), gpios)
+#define GPIOTE_NODE	DT_NODELABEL(_CONCAT(gpiote, GPIOTE_INST))
+
+BUILD_ASSERT(NRF_DT_GPIOTE_INST(DT_ALIAS(led0), gpios) == GPIOTE_INST,
+	"Both sw0 and led0 GPIOs must use the same GPIOTE instance");
+BUILD_ASSERT(IS_ENABLED(_CONCAT(CONFIG_, _CONCAT(NRFX_GPIOTE, GPIOTE_INST))),
+	"NRFX_GPIOTE" STRINGIFY(GPIOTE_INST) " must be enabled in Kconfig");
+
+
 static void button_handler(nrfx_gpiote_pin_t pin,
 			   nrfx_gpiote_trigger_t trigger,
 			   void *context)

@@ -432,6 +432,12 @@ Serial
   change is that this feature is rarely used and disabling it significantly reduces the memory
   footprint.
 
+Power Management
+================
+* Runtime configuration is now disabled by default for Nordic UART drivers. The motivation for the
+  change is that this feature is rarely used and disabling it significantly reduces the memory
+  footprint.
+
 Timer
 =====
 
@@ -643,12 +649,61 @@ Shell
 ZBus
 ====
 
+* The HCI implementation for both the Host and the Controller sides has been
+  renamed for the IPC transport. The ``CONFIG_BT_RPMSG`` Kconfig option is now
+  :kconfig:option:`CONFIG_BT_HCI_IPC`, and the ``zephyr,bt-hci-rpmsg-ipc``
+  Devicetree chosen is now ``zephyr,bt-hci-ipc``. The existing sample has also
+  been renamed, from ``samples/bluetooth/hci_rpmsg`` to
+  ``samples/bluetooth/hci_ipc``. (:github:`64391`)
+* The BT GATT callback list, appended to by :c:func:`bt_gatt_cb_register`, is no longer
+  cleared on :c:func:`bt_enable`. Callbacks can now be registered before the initial
+  call to :c:func:`bt_enable`, and should no longer be re-registered after a :c:func:`bt_disable`
+  :c:func:`bt_enable` cycle. (:github:`63693`)
+* The Bluetooth UUID has been modified to rodata in ``BT_UUID_DECLARE_16``, ``BT_UUID_DECLARE_32`
+  and ``BT_UUID_DECLARE_128`` as the return value has been changed to `const`.
+  Any pointer to a UUID must be prefixed with `const`, otherwise there will be a compilation warning.
+  For example change ``struct bt_uuid *uuid = BT_UUID_DECLARE_16(xx)`` to
+  ``const struct bt_uuid *uuid = BT_UUID_DECLARE_16(xx)``. (:github:`66136`)
 * The ``CONFIG_ZBUS_MSG_SUBSCRIBER_NET_BUF_DYNAMIC`` and
   ``CONFIG_ZBUS_MSG_SUBSCRIBER_NET_BUF_STATIC`` zbus options are renamed. Instead, the new
   :kconfig:option:`CONFIG_ZBUS_MSG_SUBSCRIBER_BUF_ALLOC_DYNAMIC` and
   :kconfig:option:`CONFIG_ZBUS_MSG_SUBSCRIBER_BUF_ALLOC_STATIC` options should be used.
   (:github:`65632`)
 
+* Mesh
+
+  * The Bluetooth Mesh ``model`` declaration has been changed to add prefix ``const``.
+    The ``model->user_data``, ``model->elem_idx`` and ``model->mod_idx`` field has been changed to
+    the new runtime structure, replaced by ``model->rt->user_data``, ``model->rt->elem_idx`` and
+    ``model->rt->mod_idx`` separately. (:github:`65152`)
+  * The Bluetooth Mesh ``element`` declaration has been changed to add prefix ``const``.
+    The ``elem->addr`` field has been changed to the new runtime structure, replaced by
+    ``elem->rt->addr``. (:github:`65388`)
+  * Deprecated :kconfig:option:`CONFIG_BT_MESH_PROV_DEVICE`. This option is
+    replaced by new option :kconfig:option:`CONFIG_BT_MESH_PROVISIONEE` to
+    be aligned with Mesh Protocol Specification v1.1, section 5.4. (:github:`64252`)
+  * Removed the ``CONFIG_BT_MESH_V1d1`` Kconfig option.
+  * Removed the ``CONFIG_BT_MESH_TX_SEG_RETRANS_COUNT``,
+    ``CONFIG_BT_MESH_TX_SEG_RETRANS_TIMEOUT_UNICAST``,
+    ``CONFIG_BT_MESH_TX_SEG_RETRANS_TIMEOUT_GROUP``, ``CONFIG_BT_MESH_SEG_ACK_BASE_TIMEOUT``,
+    ``CONFIG_BT_MESH_SEG_ACK_PER_HOP_TIMEOUT``, ``BT_MESH_SEG_ACK_PER_SEGMENT_TIMEOUT``
+    Kconfig options. They are superseded by the
+    :kconfig:option:`CONFIG_BT_MESH_SAR_TX_SEG_INT_STEP`,
+    :kconfig:option:`CONFIG_BT_MESH_SAR_TX_UNICAST_RETRANS_COUNT`,
+    :kconfig:option:`CONFIG_BT_MESH_SAR_TX_UNICAST_RETRANS_WITHOUT_PROG_COUNT`,
+    :kconfig:option:`CONFIG_BT_MESH_SAR_TX_UNICAST_RETRANS_INT_STEP`,
+    :kconfig:option:`CONFIG_BT_MESH_SAR_TX_UNICAST_RETRANS_INT_INC`,
+    :kconfig:option:`CONFIG_BT_MESH_SAR_TX_MULTICAST_RETRANS_COUNT`,
+    :kconfig:option:`CONFIG_BT_MESH_SAR_TX_MULTICAST_RETRANS_INT`,
+    :kconfig:option:`CONFIG_BT_MESH_SAR_RX_SEG_THRESHOLD`,
+    :kconfig:option:`CONFIG_BT_MESH_SAR_RX_ACK_DELAY_INC`,
+    :kconfig:option:`CONFIG_BT_MESH_SAR_RX_SEG_INT_STEP`,
+    :kconfig:option:`CONFIG_BT_MESH_SAR_RX_DISCARD_TIMEOUT`,
+    :kconfig:option:`CONFIG_BT_MESH_SAR_RX_ACK_RETRANS_COUNT` Kconfig options.
+
+
+LoRaWAN
+=======
 * To enable the zbus HLP priority boost, the developer must call the
   :c:func:`zbus_obs_attach_to_thread` inside the attaching thread. The observer will then assume the
   attached thread priority which will be used by zbus to calculate HLP priority. (:github:`63183`)
@@ -690,6 +745,34 @@ Userspace
   * ``z_object_init`` to :c:func:`k_object_init`
   * ``z_dynamic_object_aligned_create`` to :c:func:`k_object_create_dynamic_aligned`
 
+* CoAP observer events have moved from a callback function in a CoAP resource to the Network Events
+  subsystem. The ``CONFIG_COAP_OBSERVER_EVENTS`` configuration option has been removed.
+  (:github:`65936`)
+
+* The CoAP public API function :c:func:`coap_pending_init` has changed. The parameter
+  ``retries`` is replaced with a pointer to :c:struct:`coap_transmission_parameters`. This allows to
+  specify retransmission parameters of the confirmable message. It is safe to pass a NULL pointer to
+  use default values.
+  (:github:`66482`)
+
+* The CoAP public API functions :c:func:`coap_service_send` and :c:func:`coap_resource_send` have
+  changed. An additional parameter pointer to :c:struct:`coap_transmission_parameters` has been
+  added. It is safe to pass a NULL pointer to use default values. (:github:`66540`)
+
+* The IGMP multicast library now supports IGMPv3. This results in a minor change to the existing
+  api. The :c:func:`net_ipv4_igmp_join` now takes an additional argument of the type
+  ``const struct igmp_param *param``. This allows IGMPv3 to exclude/include certain groups of
+  addresses. If this functionality is not used or available (when using IGMPv2), you can safely pass
+  a NULL pointer. IGMPv3 can be enabled using the Kconfig ``CONFIG_NET_IPV4_IGMPV3``.
+  (:github:`65293`)
+
+* The network stack now uses a separate IPv4 TTL (time-to-live) value for multicast packets.
+  Before, the same TTL value was used for unicast and multicast packets.
+  The IPv6 hop limit value is also changed so that unicast and multicast packets can have a
+  different one. (:github:`65886`)
+
+Other Subsystems
+================
 Architectures
 *************
 

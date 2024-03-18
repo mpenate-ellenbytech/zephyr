@@ -35,6 +35,8 @@
 # Therefore `version.cmake` should not use include_guard(GLOBAL).
 # The final load of `version.cmake` will setup correct build version values.
 
+include(${ZEPHYR_BASE}/cmake/hex.cmake)
+
 if(NOT DEFINED VERSION_FILE AND NOT DEFINED VERSION_TYPE)
   set(VERSION_FILE ${ZEPHYR_BASE}/VERSION ${APPLICATION_SOURCE_DIR}/VERSION)
   set(VERSION_TYPE KERNEL                 APP)
