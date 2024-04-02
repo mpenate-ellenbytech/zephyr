@@ -293,7 +293,7 @@ static inline int z_impl_fuel_gauge_get_props(const struct device *dev, fuel_gau
 {
 	const struct fuel_gauge_driver_api *api = (const struct fuel_gauge_driver_api *)dev->api;
 
-	for (int i = 0; i < len; i++) {
+	for (size_t i = 0; i < len; i++) {
 		int ret = api->get_property(dev, props[i], vals + i);
 
 		if (ret) {
