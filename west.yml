@@ -23,6 +23,8 @@ manifest:
       url-base: https://github.com/zephyrproject-rtos
     - name: babblesim
       url-base: https://github.com/BabbleSim
+    - name: eti-mp-forks
+      url-base: https://github.com/mpenate-ellenbytech
 
   group-filter: [-babblesim, -optional]
 
@@ -266,10 +268,12 @@ manifest:
       revision: 1a5938ebaca4f13fe79ce074f5dee079783aa29f
       path: modules/lib/liblc3
     - name: littlefs
+      remote: eti-mp-forks
+      repo-path: littlefs
       path: modules/fs/littlefs
       groups:
         - fs
-      revision: 408c16a909dd6cf128874a76f21c793798c9e423
+      revision: v2.9.1-eti
     - name: loramac-node
       revision: 842413c5fb98707eb5f26e619e8e792453877897
       path: modules/lib/loramac-node
