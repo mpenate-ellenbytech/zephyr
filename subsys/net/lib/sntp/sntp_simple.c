@@ -43,7 +43,7 @@ int sntp_simple(const char *server, uint32_t timeout, struct sntp_time *time)
 	}
 
 	/* Timeout for current iteration */
-	iter_timeout = 100;
+	iter_timeout = 250;
 
 	while (k_uptime_get() < deadline) {
 		res = sntp_query(&sntp_ctx, iter_timeout, time);
