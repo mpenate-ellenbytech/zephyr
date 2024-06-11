@@ -2457,27 +2457,13 @@ MODEM_CHAT_SCRIPT_DEFINE(sqn_gm02s_periodic_chat_script,
                                                                                                    \
 	MODEM_CELLULAR_DEFINE_USER_PIPE_DATA(                                                      \
 		inst,                                                                              \
-		gnss_pipe,                                                                         \
-		CONFIG_MODEM_CELLULAR_USER_PIPE_BUFFER_SIZES                                       \
-	);                                                                                         \
-                                                                                                   \
-	MODEM_CELLULAR_DEFINE_USER_PIPE_DATA(                                                      \
-		inst,                                                                              \
 		user_pipe_0,                                                                       \
-		CONFIG_MODEM_CELLULAR_USER_PIPE_BUFFER_SIZES                                       \
-	);                                                                                         \
-                                                                                                   \
-	MODEM_CELLULAR_DEFINE_USER_PIPE_DATA(                                                      \
-		inst,                                                                              \
-		user_pipe_1,                                                                       \
 		CONFIG_MODEM_CELLULAR_USER_PIPE_BUFFER_SIZES                                       \
 	);                                                                                         \
                                                                                                    \
 	MODEM_CELLULAR_DEFINE_USER_PIPES(                                                          \
 		inst,                                                                              \
-		MODEM_CELLULAR_INIT_USER_PIPE(inst, gnss_pipe, 3),                                 \
-		MODEM_CELLULAR_INIT_USER_PIPE(inst, user_pipe_0, 4),                               \
-		MODEM_CELLULAR_INIT_USER_PIPE(inst, user_pipe_1, 5),                               \
+		MODEM_CELLULAR_INIT_USER_PIPE(inst, user_pipe_0, 3),                               \
 	);                                                                                         \
                                                                                                    \
 	static const struct modem_cellular_config MODEM_CELLULAR_INST_NAME(config, inst) = {       \
