@@ -46,6 +46,11 @@ LOG_MODULE_REGISTER(modem_cellular, CONFIG_MODEM_LOG_LEVEL);
 #define CESQ_RSRP_TO_DB(v) (-140 + (v))
 #define CESQ_RSRQ_TO_DB(v) (-20 + ((v) / 2))
 
+#define QCSQ_RSSI_TO_UINT8(v)	(((v) + 113) / 2)
+#define QCSQ_RSRP_TO_UINT8(v)	(140 + (v))
+#define QCSQ_RSRQ_TO_UINT8(v)	(2 * ((v) + 20))
+#define QCSQ_SINR_TO_DB(v)		(((v) / 5) - 20)
+
 enum modem_cellular_state {
 	MODEM_CELLULAR_STATE_IDLE = 0,
 	MODEM_CELLULAR_STATE_RESET_PULSE,
@@ -112,6 +117,7 @@ struct modem_cellular_data {
 	uint8_t rssi;
 	uint8_t rsrp;
 	uint8_t rsrq;
+	uint8_t sinr;
 	uint8_t imei[MODEM_CELLULAR_DATA_IMEI_LEN];
 	uint8_t model_id[MODEM_CELLULAR_DATA_MODEL_ID_LEN];
 	uint8_t imsi[MODEM_CELLULAR_DATA_IMSI_LEN];
@@ -409,6 +415,29 @@ static void modem_cellular_chat_on_cesq(struct modem_chat *chat, char **argv, ui
 	data->rsrp = (uint8_t)atoi(argv[6]);
 }
 
+static void modem_cellular_chat_on_qcsq(struct modem_chat *chat, char **argv, uint16_t argc,
+					void *user_data)
+{
+	    struct modem_cellular_data *data = (struct modem_cellular_data *)user_data;
+
+        // [0]    [1]    [2]  [3] [4] [5]
+        //        tech  rssi rsrp sinr rsrq
+        // +QCSQ: "eMTC",-70,-100,65,-18
+        //  "eMTC" -71 -101 80 -16
+
+        if (argc != 6) {
+                return;
+        }
+
+        data->rssi = (uint8_t)QCSQ_RSSI_TO_UINT8(atoi(argv[2])); // JDW Check this
+        data->rsrp = (uint8_t)QCSQ_RSRP_TO_UINT8(atoi(argv[3]));
+        // An integer indicating the signal to interference plus noise ratio (SINR).
+        // Logarithmic value of SINR. Values are in 1/5th of a dB.
+        // Range: 0–250 which translates to -20 dB to +30 dB.
+        data->sinr = (uint8_t)atoi(argv[4]);
+        data->rsrq = (uint8_t)QCSQ_RSRQ_TO_UINT8(atoi(argv[5]));
+}
+
 static void modem_cellular_chat_on_iccid(struct modem_chat *chat, char **argv, uint16_t argc,
 					void *user_data)
 {
@@ -481,6 +510,7 @@ MODEM_CHAT_MATCH_DEFINE(imei_match, "", "", modem_cellular_chat_on_imei);
 MODEM_CHAT_MATCH_DEFINE(cgmm_match, "", "", modem_cellular_chat_on_cgmm);
 MODEM_CHAT_MATCH_DEFINE(csq_match, "+CSQ: ", ",", modem_cellular_chat_on_csq);
 MODEM_CHAT_MATCH_DEFINE(cesq_match, "+CESQ: ", ",", modem_cellular_chat_on_cesq);
+MODEM_CHAT_MATCH_DEFINE(qcsq_match, "+QCSQ: ", ",", modem_cellular_chat_on_qcsq);
 MODEM_CHAT_MATCH_DEFINE(qccid_match __maybe_unused, "+QCCID: ", "", modem_cellular_chat_on_iccid);
 MODEM_CHAT_MATCH_DEFINE(iccid_match __maybe_unused, "+ICCID: ", "", modem_cellular_chat_on_iccid);
 MODEM_CHAT_MATCH_DEFINE(cimi_match __maybe_unused, "", "", modem_cellular_chat_on_imsi);
@@ -1353,6 +1383,13 @@ static inline int modem_cellular_csq_parse_rssi(uint8_t rssi, int16_t *value)
 	return 0;
 }
 
+MODEM_CHAT_SCRIPT_CMDS_DEFINE(get_signal_qcsq_chat_script_cmds,
+                             MODEM_CHAT_SCRIPT_CMD_RESP("AT+QCSQ", qcsq_match),
+                             MODEM_CHAT_SCRIPT_CMD_RESP("", ok_match));
+
+MODEM_CHAT_SCRIPT_DEFINE(get_signal_qcsq_chat_script, get_signal_qcsq_chat_script_cmds,
+                        abort_matches, modem_cellular_chat_callback_handler, 2);
+
 MODEM_CHAT_SCRIPT_CMDS_DEFINE(get_signal_cesq_chat_script_cmds,
 			      MODEM_CHAT_SCRIPT_CMD_RESP("AT+CESQ", cesq_match),
 			      MODEM_CHAT_SCRIPT_CMD_RESP("", ok_match));
@@ -1386,6 +1423,12 @@ static inline int modem_cellular_cesq_parse_rsrq(uint8_t rsrq, int16_t *value)
 	return 0;
 }
 
+static inline int modem_cellular_cesq_parse_sinr(uint8_t sinr, int16_t *value)
+{
+	*value = (int16_t)QCSQ_SINR_TO_DB(sinr);
+	return 0;
+}
+
 static int modem_cellular_get_signal(const struct device *dev,
 				     const enum cellular_signal_type type,
 				     int16_t *value)
@@ -1406,7 +1449,12 @@ static int modem_cellular_get_signal(const struct device *dev,
 
 	case CELLULAR_SIGNAL_RSRP:
 	case CELLULAR_SIGNAL_RSRQ:
+#if DT_HAS_COMPAT_STATUS_OKAY(quectel_bg95)
+	case CELLULAR_SIGNAL_SINR:
+		ret = modem_chat_run_script(&data->chat, &get_signal_qcsq_chat_script);
+#else
 		ret = modem_chat_run_script(&data->chat, &get_signal_cesq_chat_script);
+#endif
 		break;
 
 	default:
@@ -1431,6 +1479,10 @@ static int modem_cellular_get_signal(const struct device *dev,
 
 	case CELLULAR_SIGNAL_RSRQ:
 		ret = modem_cellular_cesq_parse_rsrq(data->rsrq, value);
+		break;
+
+	case CELLULAR_SIGNAL_SINR:
+		ret = modem_cellular_cesq_parse_sinr(data->sinr, value);
 		break;
 
 	default:
