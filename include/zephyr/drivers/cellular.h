@@ -58,6 +58,7 @@ enum cellular_signal_type {
 	CELLULAR_SIGNAL_RSSI,
 	CELLULAR_SIGNAL_RSRP,
 	CELLULAR_SIGNAL_RSRQ,
+	CELLULAR_SIGNAL_SINR,
 };
 
 /** Cellular modem info type */
