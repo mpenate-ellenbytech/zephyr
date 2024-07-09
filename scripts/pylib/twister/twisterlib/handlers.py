@@ -152,7 +152,7 @@ class Handler:
         self.instance.record(harness.recording)
 
     def get_default_domain_build_dir(self):
-        if self.instance.testsuite.sysbuild:
+        if self.instance.sysbuild:
             # Load domain yaml to get default domain build directory
             # Note: for targets using QEMU, we assume that the target will
             # have added any additional images to the run target manually
@@ -441,7 +441,7 @@ class DeviceHandler(Handler):
         dut_found = False
 
         for d in self.duts:
-            if fixture and fixture not in d.fixtures:
+            if fixture and fixture not in map(lambda f: f.split(sep=':')[0], d.fixtures):
                 continue
             if d.platform != device or (d.serial is None and d.serial_pty is None):
                 continue
