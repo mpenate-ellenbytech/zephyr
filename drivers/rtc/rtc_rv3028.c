@@ -382,7 +382,7 @@ static int rv3028_int_enable_unlocked(const struct device *dev, bool enable)
 	uint8_t clkout = 0;
 	int err;
 
-	if (enable || config->cof == RV3028_CLKOUT_FD_LOW) {
+	if (/*enable || */config->cof == RV3028_CLKOUT_FD_LOW) {
 		/* Disable CLKOUT */
 		clkout |= FIELD_PREP(RV3028_CLKOUT_FD, RV3028_CLKOUT_FD_LOW);
 	} else {
