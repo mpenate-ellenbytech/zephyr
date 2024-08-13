@@ -83,13 +83,13 @@ static int ws2812_strip_update_rgb(const struct device *dev,
 	const uint8_t one = cfg->one_frame, zero = cfg->zero_frame;
 	struct spi_buf buf = {
 		.buf = cfg->px_buf,
-		.len = (cfg->length * 8 * cfg->num_colors),
+		.len = (cfg->length * 8 * cfg->num_colors) + CONFIG_WS2812_STRIP_SPI_PREAMBLE,
 	};
 	const struct spi_buf_set tx = {
 		.buffers = &buf,
 		.count = 1
 	};
-	uint8_t *px_buf = cfg->px_buf;
+	uint8_t *px_buf = &cfg->px_buf[CONFIG_WS2812_STRIP_SPI_PREAMBLE];
 	size_t i;
 	int rc;
 
@@ -166,6 +166,10 @@ static int ws2812_spi_init(const struct device *dev)
 		}
 	}
 
+	if (CONFIG_WS2812_STRIP_SPI_PREAMBLE > 0) {
+		memset(cfg->px_buf, 0, CONFIG_WS2812_STRIP_SPI_PREAMBLE);
+	}
+
 	return 0;
 }
 
@@ -200,7 +204,7 @@ static const struct led_strip_driver_api ws2812_spi_api = {
 
 #define WS2812_SPI_DEVICE(idx)						 \
 									 \
-	static uint8_t ws2812_spi_##idx##_px_buf[WS2812_SPI_BUFSZ(idx)]; \
+	static uint8_t ws2812_spi_##idx##_px_buf[WS2812_SPI_BUFSZ(idx) + CONFIG_WS2812_STRIP_SPI_PREAMBLE]; \
 									 \
 	WS2812_COLOR_MAPPING(idx);					 \
 									 \

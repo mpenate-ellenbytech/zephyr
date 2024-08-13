@@ -17,6 +17,17 @@ config WS2812_STRIP_SPI
 	  The SPI driver is portable, but requires significantly more
 	  memory (1 byte of overhead per bit of pixel data).
 
+if WS2812_STRIP_SPI
+
+	config WS2812_STRIP_SPI_PREAMBLE
+	int "WS2812 LED strip SPI driver 0 byte preamble length"
+	default 0
+	help
+	  Preambles the pixel data from the driver with configured number of
+	  0 value bytes.
+
+endif
+
 config WS2812_STRIP_I2S
 	bool "WS2812 LED strip I2S driver"
 	default y
