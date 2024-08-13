@@ -119,6 +119,8 @@ struct pcal64xxa_drv_cfg {
 	const struct gpio_dt_spec gpio_reset;
 	const struct gpio_dt_spec gpio_interrupt;
 	const struct pcal64xxa_chip_api *chip_api;
+	bool gpio_open_drain_port0;
+ 	bool gpio_open_drain_port1;
 };
 
 static int pcal64xxa_pin_configure(const struct device *dev, gpio_pin_t pin, gpio_flags_t flags)
@@ -873,11 +875,33 @@ int pcal64xxa_init(const struct device *dev)
 		}
 	}
 
+    if (drv_cfg->gpio_open_drain_port0 | drv_cfg->gpio_open_drain_port1) {
+        uint8_t od_enabled_byte = 0;
+
+        if (drv_cfg->gpio_open_drain_port0) {
+            od_enabled_byte |= 0b01;
+        }
+
+        if (drv_cfg->gpio_open_drain_port1) {
+            od_enabled_byte |= 0b10;
+        }
+
+        rc = pcal64xxa_i2c_write(&drv_cfg->i2c, PCAL6416A_REG_OUTPUT_PORT_CONFIGURATION,
+                     (uint8_t)od_enabled_byte);
+        if (rc != 0) {
+            return -EIO;
+        }
+    }
+
 	/* Device configured, unlock it so that it can be used. */
 	k_sem_give(&drv_data->lock);
 
 	return 0;
 }
+
+#define PCAL64XXA_INIT_OPEN_DRAIN_PORT0(idx) DT_INST_PROP_OR(idx, port0_open_drain_enable, 0)
+
+#define PCAL64XXA_INIT_OPEN_DRAIN_PORT1(idx) DT_INST_PROP_OR(idx, port1_open_drain_enable, 0)
 
 #define PCAL64XXA_INIT_INT_GPIO_FIELDS(idx)                                                        \
 	COND_CODE_1(DT_INST_NODE_HAS_PROP(idx, int_gpios),                                         \
@@ -910,6 +934,8 @@ int pcal64xxa_init(const struct device *dev)
 		.gpio_interrupt = PCAL64XXA_INIT_INT_GPIO_FIELDS(idx),                             \
 		.gpio_reset = PCAL64XXA_INIT_RESET_GPIO_FIELDS(idx),                               \
 		.chip_api = &pcal6408a_chip_api,                                                   \
+		.gpio_open_drain_port0 = PCAL64XXA_INIT_OPEN_DRAIN_PORT0(idx),                     \
+        .gpio_open_drain_port1 = PCAL64XXA_INIT_OPEN_DRAIN_PORT1(idx),                     \
 	};                                                                                         \
 	static struct pcal64xxa_drv_data pcal6408a_data##idx = {                                   \
 		.lock = Z_SEM_INITIALIZER(pcal6408a_data##idx.lock, 1, 1),                         \
@@ -944,6 +970,8 @@ DT_INST_FOREACH_STATUS_OKAY(GPIO_PCAL6408A_INST)
 		.gpio_interrupt = PCAL64XXA_INIT_INT_GPIO_FIELDS(idx),                             \
 		.gpio_reset = PCAL64XXA_INIT_RESET_GPIO_FIELDS(idx),                               \
 		.chip_api = &pcal6416a_chip_api,                                                   \
+		.gpio_open_drain_port0 = PCAL64XXA_INIT_OPEN_DRAIN_PORT0(idx),                     \
+        .gpio_open_drain_port1 = PCAL64XXA_INIT_OPEN_DRAIN_PORT1(idx),                     \
 	};                                                                                         \
 	static struct pcal64xxa_drv_data pcal6416a_data##idx = {                                   \
 		.lock = Z_SEM_INITIALIZER(pcal6416a_data##idx.lock, 1, 1),                         \
