@@ -402,19 +402,7 @@ static void modem_cellular_chat_on_csq(struct modem_chat *chat, char **argv, uin
 	data->rssi = (uint8_t)atoi(argv[1]);
 }
 
-static void modem_cellular_chat_on_cesq(struct modem_chat *chat, char **argv, uint16_t argc,
-					void *user_data)
-{
-	struct modem_cellular_data *data = (struct modem_cellular_data *)user_data;
-
-	if (argc != 7) {
-		return;
-	}
-
-	data->rsrq = (uint8_t)atoi(argv[5]);
-	data->rsrp = (uint8_t)atoi(argv[6]);
-}
-
+#if DT_HAS_COMPAT_STATUS_OKAY(quectel_bg95)
 static void modem_cellular_chat_on_qcsq(struct modem_chat *chat, char **argv, uint16_t argc,
 					void *user_data)
 {
@@ -437,6 +425,20 @@ static void modem_cellular_chat_on_qcsq(struct modem_chat *chat, char **argv, ui
         data->sinr = (uint8_t)atoi(argv[4]);
         data->rsrq = (uint8_t)QCSQ_RSRQ_TO_UINT8(atoi(argv[5]));
 }
+#else
+static void modem_cellular_chat_on_cesq(struct modem_chat *chat, char **argv, uint16_t argc,
+					void *user_data)
+{
+	struct modem_cellular_data *data = (struct modem_cellular_data *)user_data;
+
+	if (argc != 7) {
+		return;
+	}
+
+	data->rsrq = (uint8_t)atoi(argv[5]);
+	data->rsrp = (uint8_t)atoi(argv[6]);
+}
+#endif
 
 static void modem_cellular_chat_on_iccid(struct modem_chat *chat, char **argv, uint16_t argc,
 					void *user_data)
@@ -509,8 +511,11 @@ MODEM_CHAT_MATCHES_DEFINE(allow_match,
 MODEM_CHAT_MATCH_DEFINE(imei_match, "", "", modem_cellular_chat_on_imei);
 MODEM_CHAT_MATCH_DEFINE(cgmm_match, "", "", modem_cellular_chat_on_cgmm);
 MODEM_CHAT_MATCH_DEFINE(csq_match, "+CSQ: ", ",", modem_cellular_chat_on_csq);
-MODEM_CHAT_MATCH_DEFINE(cesq_match, "+CESQ: ", ",", modem_cellular_chat_on_cesq);
+#if DT_HAS_COMPAT_STATUS_OKAY(quectel_bg95)
 MODEM_CHAT_MATCH_DEFINE(qcsq_match, "+QCSQ: ", ",", modem_cellular_chat_on_qcsq);
+#else
+MODEM_CHAT_MATCH_DEFINE(cesq_match, "+CESQ: ", ",", modem_cellular_chat_on_cesq);
+#endif
 MODEM_CHAT_MATCH_DEFINE(qccid_match __maybe_unused, "+QCCID: ", "", modem_cellular_chat_on_iccid);
 MODEM_CHAT_MATCH_DEFINE(iccid_match __maybe_unused, "+ICCID: ", "", modem_cellular_chat_on_iccid);
 MODEM_CHAT_MATCH_DEFINE(cimi_match __maybe_unused, "", "", modem_cellular_chat_on_imsi);
@@ -1383,20 +1388,21 @@ static inline int modem_cellular_csq_parse_rssi(uint8_t rssi, int16_t *value)
 	return 0;
 }
 
+#if DT_HAS_COMPAT_STATUS_OKAY(quectel_bg95)
 MODEM_CHAT_SCRIPT_CMDS_DEFINE(get_signal_qcsq_chat_script_cmds,
                              MODEM_CHAT_SCRIPT_CMD_RESP("AT+QCSQ", qcsq_match),
                              MODEM_CHAT_SCRIPT_CMD_RESP("", ok_match));
 
 MODEM_CHAT_SCRIPT_DEFINE(get_signal_qcsq_chat_script, get_signal_qcsq_chat_script_cmds,
                         abort_matches, modem_cellular_chat_callback_handler, 2);
-
+#else
 MODEM_CHAT_SCRIPT_CMDS_DEFINE(get_signal_cesq_chat_script_cmds,
 			      MODEM_CHAT_SCRIPT_CMD_RESP("AT+CESQ", cesq_match),
 			      MODEM_CHAT_SCRIPT_CMD_RESP("", ok_match));
 
 MODEM_CHAT_SCRIPT_DEFINE(get_signal_cesq_chat_script, get_signal_cesq_chat_script_cmds,
 			 abort_matches, modem_cellular_chat_callback_handler, 2);
-
+#endif
 /* AT+CESQ returns a response +CESQ: <rxlev>,<ber>,<rscp>,<ecn0>,<rsrq>,<rsrp> where:
  * - rsrq is a integer from 0 to 34 whose values describes the Reference Signal Receive
  *   Quality between -20 dB for 0 and -3 dB for 34 (0.5 dB steps), or unknown for 255
