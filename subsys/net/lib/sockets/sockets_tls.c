@@ -874,7 +874,9 @@ static int dtls_rx(void *ctx, unsigned char *buf, size_t len)
 	struct tls_context *tls_ctx = ctx;
 	socklen_t addrlen = sizeof(struct sockaddr);
 	struct sockaddr addr;
+#if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) && defined(MBEDTLS_SSL_SRV_C)
 	int err;
+#endif /* MBEDTLS_SSL_DTLS_HELLO_VERIFY && MBEDTLS_SSL_SRV_C */
 	ssize_t received;
 
 	received = zsock_recvfrom(tls_ctx->sock, buf, len,
@@ -892,12 +894,14 @@ static int dtls_rx(void *ctx, unsigned char *buf, size_t len)
 		if (tls_ctx->options.role == MBEDTLS_SSL_IS_SERVER) {
 			dtls_peer_address_set(tls_ctx, &addr, addrlen);
 
+#if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) && defined(MBEDTLS_SSL_SRV_C)
 			err = mbedtls_ssl_set_client_transport_id(
 				&tls_ctx->ssl,
 				(const unsigned char *)&addr, addrlen);
 			if (err < 0) {
 				return err;
 			}
+#endif /* MBEDTLS_SSL_DTLS_HELLO_VERIFY && MBEDTLS_SSL_SRV_C */
 		} else {
 			/* For clients it's incorrect to receive when
 			 * no peer has been set up.
@@ -1357,10 +1361,12 @@ static int tls_mbedtls_init(struct tls_context *context, bool is_server)
 				return -ENOMEM;
 			}
 
+#if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) && defined(MBEDTLS_SSL_SRV_C)
 			mbedtls_ssl_conf_dtls_cookies(&context->config,
 						      mbedtls_ssl_cookie_write,
 						      mbedtls_ssl_cookie_check,
 						      &context->cookie);
+#endif /* MBEDTLS_SSL_DTLS_HELLO_VERIFY && MBEDTLS_SSL_SRV_C */
 
 			mbedtls_ssl_conf_read_timeout(
 					&context->config,
