@@ -371,6 +371,9 @@ Bluetooth Audio
   This needs to be added to all instances of CAP discovery callback functions defined.
   (:github:`72797`)
 
+* All occurrences of ``set_sirk`` have been changed to just ``sirk`` as the ``s`` in ``sirk`` stands
+  for set. (:github:`73413`)
+
 Bluetooth Classic
 =================
 
@@ -396,6 +399,36 @@ Bluetooth Host
 * The field :code:`init_credits` in :c:type:`bt_l2cap_le_endpoint` has been removed as it was no
   longer used in Zephyr 3.4.0 and later. Any references to this field should be removed. No further
   action is needed.
+
+* :c:macro:`BT_LE_ADV_PARAM` now returns a :code:`const` pointer.
+  Any place where the result is stored in a local variable such as
+  :code:`struct bt_le_adv_param *param = BT_LE_ADV_CONN;` will need to
+  be updated to :code:`const struct bt_le_adv_param *param = BT_LE_ADV_CONN;` or use it for
+  initialization like :code:`struct bt_le_adv_param param = *BT_LE_ADV_CONN;`
+
+  The change to :c:macro:`BT_LE_ADV_PARAM` also affects all of its derivatives, including but not
+  limited to:
+
+  * :c:macro:`BT_LE_ADV_CONN`
+  * :c:macro:`BT_LE_ADV_NCONN`
+  * :c:macro:`BT_LE_EXT_ADV_SCAN`
+  * :c:macro:`BT_LE_EXT_ADV_CODED_NCONN_NAME`
+
+  (:github:`75065`)
+
+* :kconfig:option:`CONFIG_BT_BUF_ACL_RX_COUNT` now needs to be larger than
+  :kconfig:option:`CONFIG_BT_MAX_CONN`. This was always the case due to the design of the HCI
+  interface. It is now being enforced through a build-time assertion.
+
+  (:github:`75592`)
+
+Bluetooth Crypto
+================
+
+* :kconfig:option:`CONFIG_BT_USE_PSA_API` was added to explicitly request use
+  of PSA APIs instead of TinyCrypt for crypto operations. Of course, this is
+  possible only a PSA crypto provider available in the system, i.e.
+  :kconfig:option:`CONFIG_PSA_CRYPTO_CLIENT` is set. (:github:`73378`)
 
 Networking
 **********

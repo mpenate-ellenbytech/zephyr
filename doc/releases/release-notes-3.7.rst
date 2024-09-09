@@ -102,6 +102,26 @@ Bluetooth
     Gateway is cellular phone. It controls the device (Hands-free Unit), that is the remote
     audio input and output mechanism.
 
+  * Implemented Advanced Audio Distribution Profile (A2DP) and Audio/Video Distribution Transport
+    Protocol (AVDTP), A2DP is enabled by :kconfig:option:`CONFIG_BT_A2DP`, AVDTP is enabled
+    by :kconfig:option:`CONFIG_BT_AVDTP`. They implement the protocols and procedures that
+    realize distribution of audio content of high quality in mono, stereo, or multi-channel modes.
+    A typical use case is the streaming of music content from a stereo music player to headphones
+    or speakers. The audio data is compressed in a proper format for efficient use of the limited
+    bandwidth.
+
+  * Reworked the transmission path for data and commands. The "BT TX" thread has been removed, along
+    with the buffer pools for HCI fragments and L2CAP segments. All communication with the
+    Controller is now exclusively done in the system workqueue context.
+
+  * :kconfig:option:`CONFIG_BT_PER_ADV_SYNC_TRANSFER_RECEIVER` and
+    :kconfig:option:`CONFIG_BT_PER_ADV_SYNC_TRANSFER_SENDER` now depend on
+    :kconfig:option:`CONFIG_BT_CONN` as they do not work without connections.
+
+* HCI Driver
+
+  * Added support for Ambiq Apollo3 Blue series.
+
 Boards & SoC Support
 ********************
 

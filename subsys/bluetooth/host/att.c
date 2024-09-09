@@ -185,6 +185,62 @@ static struct bt_att_tx_meta_data tx_meta_data_storage[CONFIG_BT_ATT_TX_COUNT];
 struct bt_att_tx_meta_data *bt_att_get_tx_meta_data(const struct net_buf *buf);
 static void att_on_sent_cb(struct bt_att_tx_meta_data *meta);
 
+#if defined(CONFIG_BT_ATT_ERR_TO_STR)
+const char *bt_att_err_to_str(uint8_t att_err)
+{
+	/* To mapping tables are used to avoid a big gap with NULL-entries. */
+	#define ATT_ERR(err) [err] = #err
+	#define ATT_ERR_SECOND(err) [err - BT_ATT_ERR_WRITE_REQ_REJECTED] = #err
+
+	const char * const first_mapping_table[] = {
+		ATT_ERR(BT_ATT_ERR_SUCCESS),
+		ATT_ERR(BT_ATT_ERR_INVALID_HANDLE),
+		ATT_ERR(BT_ATT_ERR_READ_NOT_PERMITTED),
+		ATT_ERR(BT_ATT_ERR_WRITE_NOT_PERMITTED),
+		ATT_ERR(BT_ATT_ERR_INVALID_PDU),
+		ATT_ERR(BT_ATT_ERR_AUTHENTICATION),
+		ATT_ERR(BT_ATT_ERR_NOT_SUPPORTED),
+		ATT_ERR(BT_ATT_ERR_INVALID_OFFSET),
+		ATT_ERR(BT_ATT_ERR_AUTHORIZATION),
+		ATT_ERR(BT_ATT_ERR_PREPARE_QUEUE_FULL),
+		ATT_ERR(BT_ATT_ERR_ATTRIBUTE_NOT_FOUND),
+		ATT_ERR(BT_ATT_ERR_ATTRIBUTE_NOT_LONG),
+		ATT_ERR(BT_ATT_ERR_ENCRYPTION_KEY_SIZE),
+		ATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN),
+		ATT_ERR(BT_ATT_ERR_UNLIKELY),
+		ATT_ERR(BT_ATT_ERR_INSUFFICIENT_ENCRYPTION),
+		ATT_ERR(BT_ATT_ERR_UNSUPPORTED_GROUP_TYPE),
+		ATT_ERR(BT_ATT_ERR_INSUFFICIENT_RESOURCES),
+		ATT_ERR(BT_ATT_ERR_DB_OUT_OF_SYNC),
+		ATT_ERR(BT_ATT_ERR_VALUE_NOT_ALLOWED),
+	};
+
+	const char * const second_mapping_table[] = {
+		ATT_ERR_SECOND(BT_ATT_ERR_WRITE_REQ_REJECTED),
+		ATT_ERR_SECOND(BT_ATT_ERR_CCC_IMPROPER_CONF),
+		ATT_ERR_SECOND(BT_ATT_ERR_PROCEDURE_IN_PROGRESS),
+		ATT_ERR_SECOND(BT_ATT_ERR_OUT_OF_RANGE),
+	};
+
+
+	if (att_err < ARRAY_SIZE(first_mapping_table) && first_mapping_table[att_err]) {
+		return first_mapping_table[att_err];
+	} else if (att_err >= BT_ATT_ERR_WRITE_REQ_REJECTED) {
+		const uint8_t second_index = att_err - BT_ATT_ERR_WRITE_REQ_REJECTED;
+
+		if (second_index < ARRAY_SIZE(second_mapping_table) &&
+		    second_mapping_table[second_index]) {
+			return second_mapping_table[second_index];
+		}
+	}
+
+	return "(unknown)";
+
+	#undef ATT_ERR
+	#undef ATT_ERR_SECOND
+}
+#endif /* CONFIG_BT_ATT_ERR_TO_STR */
+
 static void att_tx_destroy(struct net_buf *buf)
 {
 	struct bt_att_tx_meta_data *p_meta = bt_att_get_tx_meta_data(buf);
@@ -258,13 +314,6 @@ static void att_sent(void *user_data)
 	 * SDUs. Call it manually instead.
 	 */
 	bt_att_sent(chan);
-}
-
-static void chan_sent_cb(struct bt_conn *conn, void *user_data, int err)
-{
-	struct net_buf *nb = user_data;
-
-	net_buf_unref(nb);
 }
 
 /* In case of success the ownership of the buffer is transferred to the stack
@@ -360,16 +409,7 @@ static int chan_send(struct bt_att_chan *chan, struct net_buf *buf)
 
 	data->att_chan = chan;
 
-	if (IS_ENABLED(CONFIG_BT_ATT_SENT_CB_AFTER_TX)) {
-		err = bt_l2cap_send_cb(chan->att->conn, BT_L2CAP_CID_ATT, buf, chan_sent_cb,
-				       net_buf_ref(buf));
-		if (err) {
-			net_buf_unref(buf);
-		}
-	} else {
-		err = bt_l2cap_send(chan->att->conn, BT_L2CAP_CID_ATT, buf);
-	}
-
+	err = bt_l2cap_send_pdu(&chan->chan, buf, NULL, NULL);
 	if (err) {
 		if (err == -ENOBUFS) {
 			LOG_ERR("Ran out of TX buffers or contexts.");
@@ -1509,6 +1549,23 @@ static uint8_t att_read_type_req(struct bt_att_chan *chan, struct net_buf *buf)
 		return 0;
 	}
 
+	/* Reading Database Hash is special as it may be used to make client change aware
+	 * (Core Specification 5.4 Vol 3. Part G. 2.5.2.1 Robust Caching).
+	 *
+	 * GATT client shall always use GATT Read Using Characteristic UUID sub-procedure for
+	 * reading Database Hash
+	 * (Core Specification 5.4 Vol 3. Part G. 7.3 Databse Hash)
+	 */
+	if (bt_uuid_cmp(&u.uuid, BT_UUID_GATT_DB_HASH) != 0) {
+		if (!bt_gatt_change_aware(chan->att->conn, true)) {
+			if (!atomic_test_and_set_bit(chan->flags, ATT_OUT_OF_SYNC_SENT)) {
+				return BT_ATT_ERR_DB_OUT_OF_SYNC;
+			} else {
+				return 0;
+			}
+		}
+	}
+
 	return att_read_type_rsp(chan, &u.uuid, start_handle, end_handle);
 }
 
@@ -2286,7 +2343,7 @@ static uint8_t att_exec_write_rsp(struct bt_att_chan *chan, uint8_t flags)
 
 	/* The following code will iterate on all prepare writes in the
 	 * prep_queue, and reassemble those that share the same handle.
-	 * Once a handle has been ressembled, it is sent to the upper layers,
+	 * Once a handle has been reassembled, it is sent to the upper layers,
 	 * and the next handle is processed
 	 */
 	while (!sys_slist_is_empty(&chan->att->prep_queue)) {
@@ -3197,8 +3254,8 @@ static void bt_att_encrypt_change(struct bt_l2cap_chan *chan,
 	struct bt_conn *conn = le_chan->chan.conn;
 	uint8_t err;
 
-	LOG_DBG("chan %p conn %p handle %u sec_level 0x%02x status 0x%02x", le_chan, conn,
-		conn->handle, conn->sec_level, hci_status);
+	LOG_DBG("chan %p conn %p handle %u sec_level 0x%02x status 0x%02x %s", le_chan, conn,
+		conn->handle, conn->sec_level, hci_status, bt_hci_err_to_str(hci_status));
 
 	if (!att_chan->att) {
 		LOG_DBG("Ignore encrypt change on detached ATT chan");
@@ -3459,7 +3516,7 @@ static k_timeout_t credit_based_connection_delay(struct bt_conn *conn)
 		}
 
 		const uint8_t rand_delay = random & 0x7; /* Small random delay for IOP */
-		/* The maximum value of (latency + 1) * 2 multipled with the
+		/* The maximum value of (latency + 1) * 2 multiplied with the
 		 * maximum connection interval has a maximum value of
 		 * 4000000000 which can be stored in 32-bits, so this won't
 		 * result in an overflow
@@ -3790,6 +3847,27 @@ uint16_t bt_att_get_mtu(struct bt_conn *conn)
 	}
 
 	return mtu;
+}
+
+uint16_t bt_att_get_uatt_mtu(struct bt_conn *conn)
+{
+	struct bt_att_chan *chan, *tmp;
+	struct bt_att *att;
+
+	att = att_get(conn);
+	if (!att) {
+		return 0;
+	}
+
+	SYS_SLIST_FOR_EACH_CONTAINER_SAFE(&att->chans, chan, tmp, node) {
+		if (!bt_att_is_enhanced(chan)) {
+			return bt_att_mtu(chan);
+		}
+	}
+
+	LOG_WRN("No UATT channel found in %p", conn);
+
+	return 0;
 }
 
 static void att_chan_mtu_updated(struct bt_att_chan *updated_chan)

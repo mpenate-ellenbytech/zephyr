@@ -205,13 +205,14 @@ static void test_central_main(void)
 
 	/* Try to send a buffer larger than the MTU */
 	err = bt_l2cap_chan_send(&channel.chan, buf);
-	if (err != -EMSGSIZE) {
-		FAIL("Expected error code -EMSGSIZE, got %d\n", err);
-	}
 
-	printk("Buffer user data (Expecting all bytes to be " STRINGIFY(FILL) "): ");
-	for (int i = 0; i < USER_DATA_SIZE; i++) {
-		printk("%02X", buf->user_data[i]);
+	/* L2CAP will take our `buf` with non-null user_data. We verify that:
+	 * - it is cleared
+	 * - we don't segfault later (e.g. in `tx_notify`)
+	 */
+
+	if (err != 0) {
+		FAIL("Got error %d\n", err);
 	}
 
 	printk("\n");

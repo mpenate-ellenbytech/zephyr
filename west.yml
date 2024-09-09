@@ -168,7 +168,7 @@ manifest:
       groups:
         - hal
     - name: hal_infineon
-      revision: b1a47231e8671c882c5f055f9f10c32b18133d08
+      revision: f25734a72c585f6675e8254a382e80e78a3cd03a
       path: modules/hal/infineon
       groups:
         - hal
@@ -193,7 +193,7 @@ manifest:
       groups:
         - hal
     - name: hal_nxp
-      revision: 57d844b03ea545aa702ae99d9777481709ba8aa4
+      revision: 5e84f1d2173e3c5057725d76f9dad6bfabad0b5f
       path: modules/hal/nxp
       groups:
         - hal
@@ -234,7 +234,7 @@ manifest:
       groups:
         - hal
     - name: hal_telink
-      revision: 38573af589173259801ae6c2b34b7d4c9e626746
+      revision: 4226c7fc17d5a34e557d026d428fc766191a0800
       path: modules/hal/telink
       groups:
         - hal

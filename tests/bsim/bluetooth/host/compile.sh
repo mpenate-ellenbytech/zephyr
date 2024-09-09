@@ -19,6 +19,8 @@ ${ZEPHYR_BASE}/tests/bsim/bluetooth/host/security/compile.sh
 
 app=tests/bsim/bluetooth/host/iso/cis compile
 app=tests/bsim/bluetooth/host/iso/bis compile
+app=tests/bsim/bluetooth/host/iso/frag compile
+app=tests/bsim/bluetooth/host/iso/frag_2 compile
 
 app=tests/bsim/bluetooth/host/misc/disable compile
 app=tests/bsim/bluetooth/host/misc/disconnect/dut compile
@@ -36,6 +38,7 @@ app=tests/bsim/bluetooth/host/privacy/peripheral conf_file=prj_rpa_sharing.conf 
 app=tests/bsim/bluetooth/host/privacy/device compile
 app=tests/bsim/bluetooth/host/privacy/legacy compile
 
-app=tests/bsim/bluetooth/host/id/settings compile
+run_in_background ${ZEPHYR_BASE}/tests/bsim/bluetooth/host/id/settings/compile.sh
+run_in_background ${ZEPHYR_BASE}/tests/bsim/bluetooth/host/scan/start_stop/compile.sh
 
 wait_for_background_jobs

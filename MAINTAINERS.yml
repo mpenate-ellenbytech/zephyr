@@ -393,8 +393,54 @@ Bluetooth Host:
     - subsys/bluetooth/host/
     - subsys/bluetooth/services/
     - subsys/bluetooth/shell/
-    - tests/bluetooth/host*/
-    - tests/bsim/bluetooth/host/
+    - subsys/bluetooth/CMakeLists.txt
+    - subsys/bluetooth/Kconfig*
+    - tests/bluetooth/
+    - tests/bsim/bluetooth/
+  files-exclude:
+    - subsys/bluetooth/host/classic/
+    - include/zephyr/bluetooth/audio/
+    - include/zephyr/bluetooth/classic/
+    - include/zephyr/bluetooth/mesh/
+    - include/zephyr/bluetooth/iso.h
+    - include/zephyr/bluetooth/controller.h
+    - include/zephyr/bluetooth/mesh.h
+    - doc/connectivity/bluetooth/bluetooth-ctlr-arch.rst
+    - doc/connectivity/bluetooth/autopts/
+    - doc/connectivity/bluetooth/img/ctlr*
+    - doc/connectivity/bluetooth/api/audio/
+    - doc/connectivity/bluetooth/api/mesh/
+    - doc/connectivity/bluetooth/api/shell/iso.rst
+    - doc/connectivity/bluetooth/api/controller.rst
+    - samples/bluetooth/bap*/
+    - samples/bluetooth/cap*/
+    - samples/bluetooth/hap*/
+    - samples/bluetooth/hci_*/
+    - samples/bluetooth/pbp*/
+    - samples/bluetooth/tmap*/
+    - samples/bluetooth/*_iso/
+    - samples/bluetooth/iso_*/
+    - samples/bluetooth/mesh*/
+    - subsys/bluetooth/shell/bredr.c
+    - subsys/bluetooth/shell/iso.c
+    - subsys/bluetooth/shell/ll.c
+    - subsys/bluetooth/shell/ll.h
+    - subsys/bluetooth/shell/ticker.c
+    - subsys/bluetooth/Kconfig.iso
+    - subsys/bluetooth/host/iso.c
+    - subsys/bluetooth/host/iso_internal.h
+    - tests/bluetooth/audio/
+    - tests/bluetooth/controller/
+    - tests/bluetooth/ctrl*/
+    - tests/bluetooth/ll_settings/
+    - tests/bluetooth/mesh*/
+    - tests/bluetooth/qualification/
+    - tests/bluetooth/tester/
+    - tests/bsim/bluetooth/audio/
+    - tests/bsim/bluetooth/audio_samples/
+    - tests/bsim/bluetooth/hci_uart/
+    - tests/bsim/bluetooth/ll/
+    - tests/bsim/bluetooth/mesh/
   labels:
     - "area: Bluetooth Host"
     - "area: Bluetooth"
@@ -412,6 +458,10 @@ Bluetooth Mesh:
     - HaavardRei
     - omkar3141
   files:
+    - doc/connectivity/bluetooth/api/mesh/
+    - include/zephyr/bluetooth/mesh/
+    - include/zephyr/bluetooth/mesh.h
+    - samples/bluetooth/mesh*/
     - subsys/bluetooth/mesh/
     - include/zephyr/bluetooth/mesh/
     - tests/bluetooth/mesh*/

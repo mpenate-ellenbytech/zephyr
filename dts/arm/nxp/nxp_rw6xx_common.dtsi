@@ -15,6 +15,7 @@
 / {
 	chosen {
 		zephyr,entropy = &trng;
+		zephyr,bt-hci = &hci;
 	};
 
 	cpus {
