@@ -81,6 +81,7 @@ struct lsm6dsv16x_data {
 	uint32_t acc_gain;
 	int16_t gyro[3];
 	uint32_t gyro_gain;
+	uint8_t d6d_src;
 #if defined(CONFIG_LSM6DSV16X_ENABLE_TEMP)
 	int16_t temp_sample;
 #endif
