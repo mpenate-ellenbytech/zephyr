@@ -370,26 +370,31 @@ static void lsm6dsv16x_handle_interrupt(const struct device *dev)
 	const struct lsm6dsv16x_config *cfg = dev->config;
 	stmdev_ctx_t *ctx = (stmdev_ctx_t *)&cfg->ctx;
 
+	bool check_drdy_xl = false;
+	bool check_drdy_g = false;
+	bool check_sleep = false;
+	bool check_emb_func = false;
+
 	lsm6dsv16x_pin_int_route_t val1, val2;
 	if (lsm6dsv16x_pin_int1_route_get(ctx, &val1) < 0) {
 		LOG_ERR("pin_int1_route_get error");
-		return;
+		goto cleanup;
 	}
 	if (lsm6dsv16x_pin_int2_route_get(ctx, &val2) < 0) {
 		LOG_ERR("pin_int2_route_get error");
-		return;
+		goto cleanup;
 	}
 
-	bool check_drdy_xl = (val1.drdy_xl != 0 || val2.drdy_xl != 0);
-	bool check_drdy_g = (val1.drdy_g != 0 || val2.drdy_g != 0);
-	bool check_sleep = (val1.sleep_change != 0 || val2.sleep_change != 0);
-	bool check_emb_func = (val1.emb_func != 0 || val2.emb_func != 0);
+	check_drdy_xl = (val1.drdy_xl != 0 || val2.drdy_xl != 0);
+	check_drdy_g = (val1.drdy_g != 0 || val2.drdy_g != 0);
+	check_sleep = (val1.sleep_change != 0 || val2.sleep_change != 0);
+	check_emb_func = (val1.emb_func != 0 || val2.emb_func != 0);
 
 	if (check_drdy_xl || check_drdy_g) {
 		lsm6dsv16x_data_ready_t data_ready;
 		if (lsm6dsv16x_flag_data_ready_get(ctx, &data_ready) < 0) {
 			LOG_ERR("Failed reading data ready flag");
-			return;
+			goto cleanup;
 		}
 
 		if ((data_ready.drdy_xl) && (lsm6dsv16x->handler_drdy_acc != NULL)) {
@@ -406,7 +411,7 @@ static void lsm6dsv16x_handle_interrupt(const struct device *dev)
 		if (lsm6dsv16x_read_reg(ctx, LSM6DSV16X_WAKE_UP_SRC, (uint8_t *)&wake_up_src, 1) <
 		    0) {
 			LOG_ERR("Failed reading wake up src");
-			return;
+			goto cleanup;
 		}
 
 		if (wake_up_src.sleep_change_ia != 0) {
@@ -429,7 +434,7 @@ static void lsm6dsv16x_handle_interrupt(const struct device *dev)
 		if (lsm6dsv16x_read_reg(ctx, LSM6DSV16X_FSM_STATUS_MAINPAGE, (uint8_t *)&fsm_status,
 					1) < 0) {
 			LOG_ERR("Failed reading fsm status");
-			return;
+			goto cleanup;
 		}
 
 		if (fsm_status.is_fsm1 && lsm6dsv16x->handler_fsm[0] != NULL) {
@@ -465,8 +470,15 @@ static void lsm6dsv16x_handle_interrupt(const struct device *dev)
 		}
 	}
 
+cleanup:
 	gpio_pin_interrupt_configure_dt(lsm6dsv16x->drdy_gpio, GPIO_INT_EDGE_TO_ACTIVE);
+	if (0 != gpio_pin_get_dt(lsm6dsv16x->drdy_gpio)) {
+		k_sem_give(&lsm6dsv16x->int_sem);
+	}
 	gpio_pin_interrupt_configure_dt(lsm6dsv16x->motion_gpio, GPIO_INT_EDGE_TO_ACTIVE);
+	if (0 != gpio_pin_get_dt(lsm6dsv16x->motion_gpio)) {
+		k_sem_give(&lsm6dsv16x->int_sem);
+	}
 }
 
 static void lsm6dsv16x_gpio_callback(const struct device *dev, struct gpio_callback *cb,
@@ -697,10 +709,18 @@ int lsm6dsv16x_init_interrupt(const struct device *dev)
 		return ret;
 	}
 
+	if (0 != gpio_pin_get_dt(lsm6dsv16x->drdy_gpio)) {
+		k_sem_give(&lsm6dsv16x->int_sem);
+	}
+
 	ret = gpio_pin_interrupt_configure_dt(lsm6dsv16x->motion_gpio, GPIO_INT_EDGE_TO_ACTIVE);
 	if (ret) {
 		LOG_ERR("Failed to configure interrupt for motion");
 		return ret;
+	}
+
+	if (0 != gpio_pin_get_dt(lsm6dsv16x->motion_gpio)) {
+		k_sem_give(&lsm6dsv16x->int_sem);
 	}
 
 	return ret;
