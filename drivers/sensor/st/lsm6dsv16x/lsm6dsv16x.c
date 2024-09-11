@@ -18,6 +18,7 @@
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/__assert.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/math_extras.h>
 
 #include "lsm6dsv16x.h"
 
@@ -477,6 +478,43 @@ static int lsm6dsv16x_gyro_config(const struct device *dev, enum sensor_channel 
 	return 0;
 }
 
+static int lsm6dsv16x_rotation_config(const struct device *dev, enum sensor_channel chan,
+				      enum sensor_attribute attr, const struct sensor_value *val)
+{
+	const struct lsm6dsv16x_config *cfg = dev->config;
+	stmdev_ctx_t *ctx = (stmdev_ctx_t *)&cfg->ctx;
+	switch (attr) {
+	case SENSOR_ATTR_LOWER_THRESH: {
+		lsm6dsv16x_tap_ths_6d_t tap_ths_6d;
+		if (lsm6dsv16x_read_reg(ctx, LSM6DSV16X_TAP_THS_6D, (uint8_t *)&tap_ths_6d, 1)) {
+			LOG_ERR("Failed to read TAP_THS_6D");
+			return -EIO;
+		}
+
+		if (val->val1 >= 80) {
+			tap_ths_6d.sixd_ths = 0;
+		} else if (val->val1 >= 70) {
+			tap_ths_6d.sixd_ths = 1;
+		} else if (val->val1 >= 60) {
+			tap_ths_6d.sixd_ths = 2;
+		} else if (val->val1 >= 50) {
+			tap_ths_6d.sixd_ths = 3;
+		} else {
+			return -ENOTSUP;
+		}
+
+		if (lsm6dsv16x_write_reg(ctx, LSM6DSV16X_TAP_THS_6D, (uint8_t *)&tap_ths_6d, 1)) {
+			LOG_ERR("Failed to write TAP_THS_6D");
+			return -EIO;
+		}
+	} break;
+	default:
+		return -ENOTSUP;
+	}
+
+	return 0;
+}
+
 static int lsm6dsv16x_attr_set(const struct device *dev, enum sensor_channel chan,
 			       enum sensor_attribute attr, const struct sensor_value *val)
 {
@@ -489,6 +527,8 @@ static int lsm6dsv16x_attr_set(const struct device *dev, enum sensor_channel cha
 		return lsm6dsv16x_accel_config(dev, chan, attr, val);
 	case SENSOR_CHAN_GYRO_XYZ:
 		return lsm6dsv16x_gyro_config(dev, chan, attr, val);
+	case SENSOR_CHAN_ROTATION:
+		return lsm6dsv16x_rotation_config(dev, chan, attr, val);
 #if defined(CONFIG_LSM6DSV16X_SENSORHUB)
 	case SENSOR_CHAN_MAGN_XYZ:
 	case SENSOR_CHAN_PRESS:
@@ -536,6 +576,20 @@ static int lsm6dsv16x_sample_fetch_gyro(const struct device *dev)
 	return 0;
 }
 
+static int lsm6dsv16x_sample_fetch_rotation(const struct device *dev)
+{
+	const struct lsm6dsv16x_config *cfg = dev->config;
+	stmdev_ctx_t *ctx = (stmdev_ctx_t *)&cfg->ctx;
+	struct lsm6dsv16x_data *data = dev->data;
+
+	if (lsm6dsv16x_read_reg(ctx, LSM6DSV16X_D6D_SRC, &data->d6d_src, 1)) {
+		LOG_DBG("Failed to read D6D_SRC");
+		return -EIO;
+	}
+
+	return 0;
+}
+
 #if defined(CONFIG_LSM6DSV16X_ENABLE_TEMP)
 static int lsm6dsv16x_sample_fetch_temp(const struct device *dev)
 {
@@ -577,6 +631,9 @@ static int lsm6dsv16x_sample_fetch(const struct device *dev, enum sensor_channel
 	case SENSOR_CHAN_GYRO_XYZ:
 		lsm6dsv16x_sample_fetch_gyro(dev);
 		break;
+	case SENSOR_CHAN_ROTATION:
+		lsm6dsv16x_sample_fetch_rotation(dev);
+		break;
 #if defined(CONFIG_LSM6DSV16X_ENABLE_TEMP)
 	case SENSOR_CHAN_DIE_TEMP:
 		lsm6dsv16x_sample_fetch_temp(dev);
@@ -585,6 +642,7 @@ static int lsm6dsv16x_sample_fetch(const struct device *dev, enum sensor_channel
 	case SENSOR_CHAN_ALL:
 		lsm6dsv16x_sample_fetch_accel(dev);
 		lsm6dsv16x_sample_fetch_gyro(dev);
+		lsm6dsv16x_sample_fetch_rotation(dev);
 #if defined(CONFIG_LSM6DSV16X_ENABLE_TEMP)
 		lsm6dsv16x_sample_fetch_temp(dev);
 #endif
@@ -608,7 +666,7 @@ static inline void lsm6dsv16x_accel_convert(struct sensor_value *val, int raw_va
 
 	/* Sensitivity is exposed in ug/LSB */
 	/* Convert to m/s^2 */
-	dval = (int64_t)(raw_val) * sensitivity;
+	dval = (int64_t)(raw_val)*sensitivity;
 	sensor_ug_to_ms2(dval, val);
 }
 
@@ -652,7 +710,7 @@ static inline void lsm6dsv16x_gyro_convert(struct sensor_value *val, int raw_val
 
 	/* Sensitivity is exposed in udps/LSB */
 	/* So, calculate value in 10 udps unit and then to rad/s */
-	dval = (int64_t)(raw_val) * sensitivity / 10;
+	dval = (int64_t)(raw_val)*sensitivity / 10;
 	sensor_10udegrees_to_rad(dval, val);
 }
 
@@ -687,6 +745,24 @@ static int lsm6dsv16x_gyro_channel_get(enum sensor_channel chan, struct sensor_v
 				       struct lsm6dsv16x_data *data)
 {
 	return lsm6dsv16x_gyro_get_channel(chan, val, data, data->gyro_gain);
+}
+
+static int lsm6dsv16x_rotation_channel_get(struct sensor_value *val, struct lsm6dsv16x_data *data)
+{
+	int tz = u32_count_trailing_zeros(data->d6d_src);
+	if (tz == 32 || tz > 5) {
+		val->val1 = LSM6DSV16X_ROTATION_UNKNOWN;
+		return 0;
+	}
+
+	const uint8_t tz_to_xyz_hl_map[] = {
+		LSM6DSV16X_ROTATION_X_LOW,  LSM6DSV16X_ROTATION_X_HIGH, LSM6DSV16X_ROTATION_Y_LOW,
+		LSM6DSV16X_ROTATION_Y_HIGH, LSM6DSV16X_ROTATION_Z_LOW,  LSM6DSV16X_ROTATION_Z_HIGH,
+	};
+
+	(*(uint32_t *)&val->val1) = (uint32_t)tz_to_xyz_hl_map[tz];
+
+	return 0;
 }
 
 #if defined(CONFIG_LSM6DSV16X_ENABLE_TEMP)
@@ -799,7 +875,8 @@ static inline void lsm6dsv16x_press_convert(struct sensor_value *val, struct lsm
 	/* Pressure sensitivity is 4096 LSB/hPa */
 	/* Convert raw_val to val in kPa */
 	val->val1 = (raw_val >> 12) / 10;
-	val->val2 = (raw_val >> 12) % 10 * 100000 + (((int32_t)((raw_val)&0x0FFF) * 100000L) >> 12);
+	val->val2 =
+		(raw_val >> 12) % 10 * 100000 + (((int32_t)((raw_val) & 0x0FFF) * 100000L) >> 12);
 }
 
 static inline void lsm6dsv16x_temp_convert(struct sensor_value *val, struct lsm6dsv16x_data *data)
@@ -839,6 +916,9 @@ static int lsm6dsv16x_channel_get(const struct device *dev, enum sensor_channel 
 	case SENSOR_CHAN_GYRO_Z:
 	case SENSOR_CHAN_GYRO_XYZ:
 		lsm6dsv16x_gyro_channel_get(chan, val, data);
+		break;
+	case SENSOR_CHAN_ROTATION:
+		lsm6dsv16x_rotation_channel_get(val, data);
 		break;
 #if defined(CONFIG_LSM6DSV16X_ENABLE_TEMP)
 	case SENSOR_CHAN_DIE_TEMP:
@@ -983,6 +1063,17 @@ static int lsm6dsv16x_init_chip(const struct device *dev)
 	}
 
 	lsm6dsv16x->fsm_program_count = 0;
+
+	lsm6dsv16x_tap_cfg0_t tap_cfg0;
+	if (lsm6dsv16x_read_reg(ctx, LSM6DSV16X_TAP_CFG0, (uint8_t *)&tap_cfg0, 1)) {
+		LOG_ERR("Failed to read TAP_CFG0");
+		return -EIO;
+	}
+	tap_cfg0.low_pass_on_6d = 1;
+	if (lsm6dsv16x_write_reg(ctx, LSM6DSV16X_TAP_CFG0, (uint8_t *)&tap_cfg0, 1)) {
+		LOG_ERR("Failed to write TAP_CFG0");
+		return -EIO;
+	}
 
 	return 0;
 }
