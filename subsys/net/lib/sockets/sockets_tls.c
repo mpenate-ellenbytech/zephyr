@@ -2183,7 +2183,8 @@ int ztls_connect_ctx(struct tls_context *ctx, const struct sockaddr *addr,
 		/* TODO For simplicity, TLS handshake blocks the socket
 		 * even for non-blocking socket.
 		 */
-		ret = tls_mbedtls_handshake(ctx, K_FOREVER);
+		ret = tls_mbedtls_handshake(
+			ctx, K_MSEC(CONFIG_NET_SOCKETS_CONNECT_TIMEOUT));
 		if (ret < 0) {
 			goto error;
 		}
@@ -2240,7 +2241,8 @@ int ztls_accept_ctx(struct tls_context *parent, struct sockaddr *addr,
 	/* TODO For simplicity, TLS handshake blocks the socket even for
 	 * non-blocking socket.
 	 */
-	ret = tls_mbedtls_handshake(child, K_FOREVER);
+	ret = tls_mbedtls_handshake(
+		child, K_MSEC(CONFIG_NET_SOCKETS_CONNECT_TIMEOUT));
 	if (ret < 0) {
 		goto error;
 	}
@@ -2381,6 +2383,9 @@ static ssize_t sendto_dtls_client(struct tls_context *ctx, const void *buf,
 
 		/* TODO For simplicity, TLS handshake blocks the socket even for
 		 * non-blocking socket.
+		 * DTLS handshake timeout/retransmissions are limited by
+		 * mbed TLS, so K_FOREVER is fine here, the function will not
+		 * block indefinitely.
 		 */
 		ret = tls_mbedtls_handshake(ctx, K_FOREVER);
 		if (ret < 0) {
