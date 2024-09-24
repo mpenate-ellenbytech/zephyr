@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2023 Bjarki Arge Andreasen
+ * Copyright (c) 2024 Jeff Welder
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -417,7 +418,7 @@ static void modem_cellular_chat_on_qcsq(struct modem_chat *chat, char **argv, ui
                 return;
         }
 
-        data->rssi = (uint8_t)QCSQ_RSSI_TO_UINT8(atoi(argv[2])); // JDW Check this
+        data->rssi = (uint8_t)QCSQ_RSSI_TO_UINT8(atoi(argv[2]));
         data->rsrp = (uint8_t)QCSQ_RSRP_TO_UINT8(atoi(argv[3]));
         // An integer indicating the signal to interference plus noise ratio (SINR).
         // Logarithmic value of SINR. Values are in 1/5th of a dB.
@@ -1447,31 +1448,31 @@ static int modem_cellular_get_signal(const struct device *dev,
 		return -ENODATA;
 	}
 
-	/* Run chat script */
-	switch (type) {
-	case CELLULAR_SIGNAL_RSSI:
-		ret = modem_chat_run_script(&data->chat, &get_signal_csq_chat_script);
-		break;
+// 	/* Run chat script */
+// 	switch (type) {
+// 	case CELLULAR_SIGNAL_RSSI:
+// 		ret = modem_chat_run_script(&data->chat, &get_signal_csq_chat_script);
+// 		break;
 
-	case CELLULAR_SIGNAL_RSRP:
-	case CELLULAR_SIGNAL_RSRQ:
-#if DT_HAS_COMPAT_STATUS_OKAY(quectel_bg95)
-	case CELLULAR_SIGNAL_SINR:
-		ret = modem_chat_run_script(&data->chat, &get_signal_qcsq_chat_script);
-#else
-		ret = modem_chat_run_script(&data->chat, &get_signal_cesq_chat_script);
-#endif
-		break;
+// 	case CELLULAR_SIGNAL_RSRP:
+// 	case CELLULAR_SIGNAL_RSRQ:
+// #if DT_HAS_COMPAT_STATUS_OKAY(quectel_bg95)
+// 	case CELLULAR_SIGNAL_SINR:
+// 		ret = modem_chat_run_script(&data->chat, &get_signal_qcsq_chat_script);
+// #else
+// 		ret = modem_chat_run_script(&data->chat, &get_signal_cesq_chat_script);
+// #endif
+// 		break;
 
-	default:
-		ret = -ENOTSUP;
-		break;
-	}
+// 	default:
+// 		ret = -ENOTSUP;
+// 		break;
+// 	}
 
-	/* Verify chat script ran successfully */
-	if (ret < 0) {
-		return ret;
-	}
+// 	/* Verify chat script ran successfully */
+// 	if (ret < 0) {
+// 		return ret;
+// 	}
 
 	/* Parse received value */
 	switch (type) {
@@ -1753,6 +1754,8 @@ MODEM_CHAT_SCRIPT_CMDS_DEFINE(quectel_bg95_dial_chat_script_cmds,
 							 "\""CONFIG_MODEM_CELLULAR_APN"\"",
 							 ok_match),
 			      MODEM_CHAT_SCRIPT_CMD_RESP("AT+CFUN=1", ok_match),
+				  MODEM_CHAT_SCRIPT_CMD_RESP("AT+QCSQ", qcsq_match),
+                  MODEM_CHAT_SCRIPT_CMD_RESP("", ok_match),
 			      MODEM_CHAT_SCRIPT_CMD_RESP_NONE("ATD*99***1#", 0),);
 
 MODEM_CHAT_SCRIPT_DEFINE(quectel_bg95_dial_chat_script, quectel_bg95_dial_chat_script_cmds,
@@ -1761,7 +1764,9 @@ MODEM_CHAT_SCRIPT_DEFINE(quectel_bg95_dial_chat_script, quectel_bg95_dial_chat_s
 MODEM_CHAT_SCRIPT_CMDS_DEFINE(quectel_bg95_periodic_chat_script_cmds,
 			      MODEM_CHAT_SCRIPT_CMD_RESP("AT+CREG?", ok_match),
 			      MODEM_CHAT_SCRIPT_CMD_RESP("AT+CEREG?", ok_match),
-			      MODEM_CHAT_SCRIPT_CMD_RESP("AT+CGREG?", ok_match));
+			      MODEM_CHAT_SCRIPT_CMD_RESP("AT+CGREG?", ok_match),
+				  MODEM_CHAT_SCRIPT_CMD_RESP("AT+QCSQ", qcsq_match),
+                  MODEM_CHAT_SCRIPT_CMD_RESP("", ok_match));
 
 MODEM_CHAT_SCRIPT_DEFINE(quectel_bg95_periodic_chat_script,
 			 quectel_bg95_periodic_chat_script_cmds, abort_matches,
