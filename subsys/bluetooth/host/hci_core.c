@@ -660,7 +660,12 @@ static void hci_data_buf_overflow(struct net_buf *buf)
 {
 	struct bt_hci_evt_data_buf_overflow *evt = (void *)buf->data;
 
-	LOG_WRN("Data buffer overflow (link type 0x%02x)", evt->link_type);
+#ifndef CONFIG_BT_ASSERT
+    LOG_WRN("Data buffer overflow (link type 0x%02x)", evt->link_type);
+#else
+    // https://github.com/zephyrproject-rtos/zephyr/issues/70495
+    BT_ASSERT_MSG(false, "Data buffer overflow (link type 0x%02x)", evt->link_type);
+#endif
 }
 
 #if defined(CONFIG_BT_CENTRAL)
