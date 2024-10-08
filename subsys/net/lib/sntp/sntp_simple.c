@@ -28,7 +28,7 @@ static int sntp_simple_helper(struct sockaddr *addr, socklen_t addr_len, uint32_
 	}
 
 	/* Timeout for current iteration */
-	iter_timeout = 250;
+	iter_timeout = 2500;
 
 	while (k_uptime_get() < deadline) {
 		res = sntp_query(&sntp_ctx, iter_timeout, ts);
