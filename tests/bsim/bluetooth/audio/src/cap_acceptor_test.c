@@ -536,6 +536,36 @@ static int set_supported_contexts(void)
 	return 0;
 }
 
+void test_start_adv(void)
+{
+	int err;
+	struct bt_le_ext_adv *ext_adv;
+
+	/* Create a connectable non-scannable advertising set */
+	err = bt_le_ext_adv_create(BT_LE_ADV_CONN_FAST_1, NULL, &ext_adv);
+	if (err != 0) {
+		FAIL("Failed to create advertising set (err %d)\n", err);
+
+		return;
+	}
+
+	/* Add cap acceptor advertising data */
+	err = bt_le_ext_adv_set_data(ext_adv, cap_acceptor_ad, ARRAY_SIZE(cap_acceptor_ad), NULL,
+				     0);
+	if (err != 0) {
+		FAIL("Failed to set advertising data (err %d)\n", err);
+
+		return;
+	}
+
+	err = bt_le_ext_adv_start(ext_adv, BT_LE_EXT_ADV_START_DEFAULT);
+	if (err != 0) {
+		FAIL("Failed to start advertising set (err %d)\n", err);
+
+		return;
+	}
+}
+
 static void set_available_contexts(void)
 {
 	int err;
@@ -616,7 +646,7 @@ static void init(void)
 			bt_cap_stream_ops_register(&unicast_streams[i], &unicast_stream_ops);
 		}
 
-		err = bt_le_adv_start(BT_LE_ADV_CONN, cap_acceptor_ad,
+		err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, cap_acceptor_ad,
 				      ARRAY_SIZE(cap_acceptor_ad), NULL, 0);
 		if (err != 0) {
 			FAIL("Advertising failed to start (err %d)\n", err);

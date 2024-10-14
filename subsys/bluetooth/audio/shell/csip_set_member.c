@@ -13,11 +13,8 @@
 #include <zephyr/kernel.h>
 #include <zephyr/types.h>
 #include <zephyr/shell/shell.h>
-#include <stdlib.h>
-#include <zephyr/bluetooth/gatt.h>
-#include <zephyr/bluetooth/bluetooth.h>
-#include <zephyr/bluetooth/audio/csip.h>
-#include "shell/bt.h"
+
+#include "host/shell/bt.h"
 
 extern const struct shell *ctx_shell;
 struct bt_csip_set_member_svc_inst *svc_inst;

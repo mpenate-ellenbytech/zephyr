@@ -31,6 +31,19 @@ static const struct bt_has_preset_ops preset_ops = {
 	.select = preset_select,
 };
 
+static void start_adv(void)
+{
+	int err;
+
+	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, AD_SIZE, NULL, 0);
+	if (err) {
+		FAIL("Advertising failed to start (err %d)\n", err);
+		return;
+	}
+
+	LOG_DBG("Advertising successfully started");
+}
+
 static void test_common(void)
 {
 	struct bt_has_features_param has_param = {0};

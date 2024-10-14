@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "shell/bt.h"
+#include "host/shell/bt.h"
 
 static struct bt_vcp_included vcp_included;
 

@@ -13,7 +13,7 @@
 #include <zephyr/shell/shell.h>
 #include <stdlib.h>
 
-#include "shell/bt.h"
+#include "host/shell/bt.h"
 
 static struct bt_vcp_vol_ctlr *vcp_vol_ctlr;
 static struct bt_vcp_included vcp_included;

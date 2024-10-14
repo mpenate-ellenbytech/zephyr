@@ -27,7 +27,7 @@
 #include <zephyr/bluetooth/audio/gmap.h>
 #include <zephyr/bluetooth/audio/pacs.h>
 
-#include "shell/bt.h"
+#include "host/shell/bt.h"
 #include "audio.h"
 
 /* Determines if we can initiate streaming */

@@ -14,7 +14,7 @@
 
 #include <zephyr/bluetooth/audio/tbs.h>
 
-#include "shell/bt.h"
+#include "host/shell/bt.h"
 
 static struct bt_conn *tbs_authorized_conn;
 static bool cbs_registered;

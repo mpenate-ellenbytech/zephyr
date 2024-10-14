@@ -117,6 +117,19 @@ static void test_peripheral_main(void)
 	const struct bt_data ad[] = {
 		BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR))};
 
+	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), NULL, 0);
+	if (err != 0) {
+		FAIL("Advertising failed to start (err %d)\n", err);
+		return;
+	}
+
+	printk("Advertising successfully started\n");
+}
+
+static void test_peripheral_main(void)
+{
+	int err;
+
 	err = bt_enable(NULL);
 	if (err != 0) {
 		FAIL("Bluetooth init failed (err %d)\n", err);

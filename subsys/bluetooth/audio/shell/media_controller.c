@@ -14,13 +14,7 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 
-#include "shell/bt.h"
-#include <zephyr/bluetooth/services/ots.h>
-
-#include <zephyr/bluetooth/audio/media_proxy.h>
-#include "../media_proxy_internal.h" /* For MPL_NO_TRACK_ID - TODO: Fix */
-
-#include <zephyr/logging/log.h>
+#include "host/shell/bt.h"
 
 LOG_MODULE_REGISTER(bt_media_controller_shell, CONFIG_BT_MCS_LOG_LEVEL);
 

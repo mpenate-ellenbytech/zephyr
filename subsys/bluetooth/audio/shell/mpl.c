@@ -14,7 +14,7 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 
-#include "shell/bt.h"
+#include "host/shell/bt.h"
 
 #include <zephyr/bluetooth/audio/media_proxy.h>
 #include "../mpl_internal.h"

@@ -17,7 +17,7 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/audio/bap.h>
 #include <audio/bap_internal.h>
-#include "shell/bt.h"
+#include "host/shell/bt.h"
 
 #define PA_SYNC_INTERVAL_TO_TIMEOUT_RATIO 20 /* Set the timeout relative to interval */
 #define PA_SYNC_SKIP              5

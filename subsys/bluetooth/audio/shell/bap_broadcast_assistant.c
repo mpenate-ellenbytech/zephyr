@@ -20,7 +20,7 @@
 #include <zephyr/bluetooth/audio/bap.h>
 #include <zephyr/sys/byteorder.h>
 
-#include "shell/bt.h"
+#include "host/shell/bt.h"
 #include "../../host/hci_core.h"
 #include "audio.h"
 

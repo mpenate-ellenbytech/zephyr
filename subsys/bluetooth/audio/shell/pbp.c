@@ -13,7 +13,7 @@
 #include <zephyr/sys/util.h>
 #include <zephyr/bluetooth/audio/pbp.h>
 
-#include "shell/bt.h"
+#include "host/shell/bt.h"
 
 #define PBS_DEMO                'P', 'B', 'P'
 
