@@ -768,15 +768,16 @@ static int lsm6dsv16x_rotation_channel_get(struct sensor_value *val, struct lsm6
 #if defined(CONFIG_LSM6DSV16X_ENABLE_TEMP)
 static void lsm6dsv16x_gyro_channel_get_temp(struct sensor_value *val, struct lsm6dsv16x_data *data)
 {
-	int32_t micro_c;
+	int64_t micro_c, temp_sample;
 
 	/* convert units to micro Celsius. Raw temperature samples are
 	 * expressed in 256 LSB/deg_C units. And LSB output is 0 at 25 C.
 	 */
-	micro_c = (data->temp_sample * 1000000) / 256;
-
-	val->val1 = micro_c / 1000000 + 25;
-	val->val2 = micro_c % 1000000;
+    temp_sample = data->temp_sample;
+    micro_c = (temp_sample * 1000000LL) / 256;
+    
+    val->val1 = (int32_t)(micro_c / 1000000) + 25;
+    val->val2 = (int32_t)(micro_c % 1000000);
 }
 #endif
 
