@@ -1529,7 +1529,7 @@ MODEM_CHAT_SCRIPT_CMDS_DEFINE(get_signal_csq_chat_script_cmds,
 			      MODEM_CHAT_SCRIPT_CMD_RESP("AT+CSQ", csq_match),
 			      MODEM_CHAT_SCRIPT_CMD_RESP("", ok_match));
 
-MODEM_CHAT_SCRIPT_DEFINE(get_signal_csq_chat_script, get_signal_csq_chat_script_cmds,
+MODEM_CHAT_SCRIPT_DEFINE(get_signal_csq_chat_script __maybe_unused, get_signal_csq_chat_script_cmds,
 			 abort_matches, modem_cellular_chat_callback_handler, 2);
 
 static inline int modem_cellular_csq_parse_rssi(uint8_t rssi, int16_t *value)
@@ -1553,7 +1553,7 @@ MODEM_CHAT_SCRIPT_CMDS_DEFINE(get_signal_qcsq_chat_script_cmds,
                              MODEM_CHAT_SCRIPT_CMD_RESP("AT+QCSQ", qcsq_match),
                              MODEM_CHAT_SCRIPT_CMD_RESP("", ok_match));
 
-MODEM_CHAT_SCRIPT_DEFINE(get_signal_qcsq_chat_script, get_signal_qcsq_chat_script_cmds,
+MODEM_CHAT_SCRIPT_DEFINE(get_signal_qcsq_chat_script __maybe_unused, get_signal_qcsq_chat_script_cmds,
                         abort_matches, modem_cellular_chat_callback_handler, 2);
 #else
 MODEM_CHAT_SCRIPT_CMDS_DEFINE(get_signal_cesq_chat_script_cmds,
@@ -1932,6 +1932,15 @@ MODEM_CHAT_SCRIPT_CMDS_DEFINE(quectel_bg95_periodic_chat_script_cmds,
 MODEM_CHAT_SCRIPT_DEFINE(quectel_bg95_periodic_chat_script,
 			 quectel_bg95_periodic_chat_script_cmds, abort_matches,
 			 modem_cellular_chat_callback_handler, 4);
+
+
+MODEM_CHAT_SCRIPT_CMDS_DEFINE(quectel_bg95_shutdown_chat_script_cmds,
+			      MODEM_CHAT_SCRIPT_CMD_RESP("AT+QPOWD", ok_match));
+
+MODEM_CHAT_SCRIPT_DEFINE(quectel_bg95_shutdown_chat_script,
+			 quectel_bg95_shutdown_chat_script_cmds, abort_matches,
+			 modem_cellular_chat_callback_handler, 15);
+
 #endif
 
 #if DT_HAS_COMPAT_STATUS_OKAY(quectel_eg25_g)
@@ -2207,7 +2216,7 @@ MODEM_CHAT_SCRIPT_CMDS_DEFINE(swir_hl7800_init_chat_script_cmds,
 			      MODEM_CHAT_SCRIPT_CMD_RESP("", ok_match),
 			      MODEM_CHAT_SCRIPT_CMD_RESP("AT+CIMI", cimi_match),
 			      MODEM_CHAT_SCRIPT_CMD_RESP("", ok_match),
-			      MODEM_CHAT_SCRIPT_CMD_RESP_NONE("AT+CMUX=0,0,5,127", 0));
+			      MODEM_CHAT_SCRIPT_CMD_RESP("AT+CMUX=0,0,5,127", ok_match));
 
 MODEM_CHAT_SCRIPT_DEFINE(swir_hl7800_init_chat_script, swir_hl7800_init_chat_script_cmds,
 			 abort_matches, modem_cellular_chat_callback_handler, 10);
@@ -2483,7 +2492,8 @@ MODEM_CHAT_SCRIPT_DEFINE(sqn_gm02s_periodic_chat_script,
 				       NULL,                                                       \
 				       &quectel_bg95_init_chat_script,                             \
 				       &quectel_bg95_dial_chat_script,                             \
-				       &quectel_bg95_periodic_chat_script, NULL)
+				       &quectel_bg95_periodic_chat_script,						   \
+					   &quectel_bg95_shutdown_chat_script)
 
 #define MODEM_CELLULAR_DEVICE_QUECTEL_EG25_G(inst)                                                 \
 	MODEM_PPP_DEFINE(MODEM_CELLULAR_INST_NAME(ppp, inst), NULL, 98, 1500, 64);                 \
