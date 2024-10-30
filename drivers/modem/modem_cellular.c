@@ -53,24 +53,24 @@ LOG_MODULE_REGISTER(modem_cellular, CONFIG_MODEM_LOG_LEVEL);
 #define QCSQ_RSRQ_TO_UINT8(v)	(2 * ((v) + 20))
 #define QCSQ_SINR_TO_DB(v)		(((v) / 5) - 20)
 
-enum modem_cellular_state {
-	MODEM_CELLULAR_STATE_IDLE = 0,
-	MODEM_CELLULAR_STATE_RESET_PULSE,
-	MODEM_CELLULAR_STATE_POWER_ON_PULSE,
-	MODEM_CELLULAR_STATE_AWAIT_POWER_ON,
-	MODEM_CELLULAR_STATE_SET_BAUDRATE,
-	MODEM_CELLULAR_STATE_RUN_INIT_SCRIPT,
-	MODEM_CELLULAR_STATE_CONNECT_CMUX,
-	MODEM_CELLULAR_STATE_OPEN_DLCI1,
-	MODEM_CELLULAR_STATE_OPEN_DLCI2,
-	MODEM_CELLULAR_STATE_RUN_DIAL_SCRIPT,
-	MODEM_CELLULAR_STATE_AWAIT_REGISTERED,
-	MODEM_CELLULAR_STATE_CARRIER_ON,
-	MODEM_CELLULAR_STATE_INIT_POWER_OFF,
-	MODEM_CELLULAR_STATE_RUN_SHUTDOWN_SCRIPT,
-	MODEM_CELLULAR_STATE_POWER_OFF_PULSE,
-	MODEM_CELLULAR_STATE_AWAIT_POWER_OFF,
-};
+// enum modem_cellular_state {
+// 	MODEM_CELLULAR_STATE_IDLE = 0,
+// 	MODEM_CELLULAR_STATE_RESET_PULSE,
+// 	MODEM_CELLULAR_STATE_POWER_ON_PULSE,
+// 	MODEM_CELLULAR_STATE_AWAIT_POWER_ON,
+// 	MODEM_CELLULAR_STATE_SET_BAUDRATE,
+// 	MODEM_CELLULAR_STATE_RUN_INIT_SCRIPT,
+// 	MODEM_CELLULAR_STATE_CONNECT_CMUX,
+// 	MODEM_CELLULAR_STATE_OPEN_DLCI1,
+// 	MODEM_CELLULAR_STATE_OPEN_DLCI2,
+// 	MODEM_CELLULAR_STATE_RUN_DIAL_SCRIPT,
+// 	MODEM_CELLULAR_STATE_AWAIT_REGISTERED,
+// 	MODEM_CELLULAR_STATE_CARRIER_ON,
+// 	MODEM_CELLULAR_STATE_INIT_POWER_OFF,
+// 	MODEM_CELLULAR_STATE_RUN_SHUTDOWN_SCRIPT,
+// 	MODEM_CELLULAR_STATE_POWER_OFF_PULSE,
+// 	MODEM_CELLULAR_STATE_AWAIT_POWER_OFF,
+// };
 
 enum modem_cellular_event {
 	MODEM_CELLULAR_EVENT_RESUME = 0,
@@ -1728,10 +1728,20 @@ static int modem_cellular_get_registration_status(const struct device *dev,
 	return ret;
 }
 
+static int modem_cellular_get_modem_state(const struct device *dev,
+						  enum modem_cellular_state *state)
+{
+	struct modem_cellular_data *data = (struct modem_cellular_data *)dev->data;
+	*state = data->state;
+
+	return 0;
+}
+
 const static struct cellular_driver_api modem_cellular_api = {
 	.get_signal = modem_cellular_get_signal,
 	.get_modem_info = modem_cellular_get_modem_info,
 	.get_registration_status = modem_cellular_get_registration_status,
+	.get_modem_state = modem_cellular_get_modem_state,
 };
 
 #ifdef CONFIG_PM_DEVICE
