@@ -86,6 +86,66 @@ enum cellular_registration_status {
 	CELLULAR_REGISTRATION_REGISTERED_ROAMING,
 };
 
+enum modem_cellular_state {
+	MODEM_CELLULAR_STATE_IDLE = 0,
+	MODEM_CELLULAR_STATE_RESET_PULSE,
+	MODEM_CELLULAR_STATE_POWER_ON_PULSE,
+	MODEM_CELLULAR_STATE_AWAIT_POWER_ON,
+	MODEM_CELLULAR_STATE_SET_BAUDRATE,
+	MODEM_CELLULAR_STATE_RUN_INIT_SCRIPT,
+	MODEM_CELLULAR_STATE_CONNECT_CMUX,
+	MODEM_CELLULAR_STATE_OPEN_DLCI1,
+	MODEM_CELLULAR_STATE_OPEN_DLCI2,
+	MODEM_CELLULAR_STATE_RUN_DIAL_SCRIPT,
+	MODEM_CELLULAR_STATE_AWAIT_REGISTERED,
+	MODEM_CELLULAR_STATE_CARRIER_ON,
+	MODEM_CELLULAR_STATE_INIT_POWER_OFF,
+	MODEM_CELLULAR_STATE_RUN_SHUTDOWN_SCRIPT,
+	MODEM_CELLULAR_STATE_POWER_OFF_PULSE,
+	MODEM_CELLULAR_STATE_AWAIT_POWER_OFF,
+};
+
+// static const char *modem_cellular_state_str(enum modem_cellular_state state)
+static inline const char *cellular_modem_state_str(enum modem_cellular_state state)
+{
+	switch (state) {
+	case MODEM_CELLULAR_STATE_IDLE:
+		return "idle";
+	case MODEM_CELLULAR_STATE_RESET_PULSE:
+		return "reset pulse";
+	case MODEM_CELLULAR_STATE_POWER_ON_PULSE:
+		return "power pulse";
+	case MODEM_CELLULAR_STATE_AWAIT_POWER_ON:
+		return "await power on";
+	case MODEM_CELLULAR_STATE_SET_BAUDRATE:
+		return "set baudrate";
+	case MODEM_CELLULAR_STATE_RUN_INIT_SCRIPT:
+		return "run init script";
+	case MODEM_CELLULAR_STATE_CONNECT_CMUX:
+		return "connect cmux";
+	case MODEM_CELLULAR_STATE_OPEN_DLCI1:
+		return "open dlci1";
+	case MODEM_CELLULAR_STATE_OPEN_DLCI2:
+		return "open dlci2";
+	case MODEM_CELLULAR_STATE_AWAIT_REGISTERED:
+		return "await registered";
+	case MODEM_CELLULAR_STATE_RUN_DIAL_SCRIPT:
+		return "run dial script";
+	case MODEM_CELLULAR_STATE_CARRIER_ON:
+		return "carrier on";
+	case MODEM_CELLULAR_STATE_INIT_POWER_OFF:
+		return "init power off";
+	case MODEM_CELLULAR_STATE_RUN_SHUTDOWN_SCRIPT:
+		return "run shutdown script";
+	case MODEM_CELLULAR_STATE_POWER_OFF_PULSE:
+		return "power off pulse";
+	case MODEM_CELLULAR_STATE_AWAIT_POWER_OFF:
+		return "await power off";
+	}
+
+	return "";
+}
+
 /** API for configuring networks */
 typedef int (*cellular_api_configure_networks)(const struct device *dev,
 					       const struct cellular_network *networks,
@@ -110,6 +170,9 @@ typedef int (*cellular_api_get_registration_status)(const struct device *dev,
 						    enum cellular_access_technology tech,
 						    enum cellular_registration_status *status);
 
+/** API for getting modem state */
+typedef int (*cellular_api_get_modem_state)(const struct device *dev, enum modem_cellular_state *state);
+
 /** Cellular driver API */
 __subsystem struct cellular_driver_api {
 	cellular_api_configure_networks configure_networks;
@@ -117,6 +180,7 @@ __subsystem struct cellular_driver_api {
 	cellular_api_get_signal get_signal;
 	cellular_api_get_modem_info get_modem_info;
 	cellular_api_get_registration_status get_registration_status;
+	cellular_api_get_modem_state get_modem_state;
 };
 
 /**
@@ -249,6 +313,16 @@ static inline int cellular_get_registration_status(const struct device *dev,
 	}
 
 	return api->get_registration_status(dev, tech, status);
+}
+
+static inline int cellular_get_modem_state(const struct device *dev, enum modem_cellular_state * state) {
+	const struct cellular_driver_api *api = (const struct cellular_driver_api *)dev->api;
+
+	if (api->get_modem_state == NULL) {
+		return -ENOSYS;
+	}
+
+	return api->get_modem_state(dev, state);
 }
 
 #ifdef __cplusplus
