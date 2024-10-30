@@ -1044,6 +1044,7 @@ static void modem_cellular_run_dial_script_event_handler(struct modem_cellular_d
 		modem_cellular_enter_state(data, MODEM_CELLULAR_STATE_AWAIT_REGISTERED);
 		break;
 
+	case MODEM_CELLULAR_EVENT_DEREGISTERED: /* JDW case where you get deregistered */
 	case MODEM_CELLULAR_EVENT_SUSPEND:
 		modem_cellular_enter_state(data, MODEM_CELLULAR_STATE_INIT_POWER_OFF);
 		break;
