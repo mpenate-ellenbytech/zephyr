@@ -150,8 +150,17 @@ Sensors
   to support all JEDEC JC 42.4 compatible temperature sensors. It now uses the
   :dtcompatible:`jedec,jc-42.4-temp` compatible string instead to the ``microchip,mcp9808`` string.
 
+* The ``nxp,`` prefixed properties in :dtcompatible:`nxp,kinetis-acmp` have been deprecated in favor
+  of properties without the prefix. The sensor based driver for the :dtcompatible:`nxp,kinetis-acmp`
+  has been updated to support both the new and deprecated property names. Uses of the deprecated
+  property names should be updated to the new property names.
+
 Serial
 ======
+
+ * Users of :c:func:`uart_irq_tx_ready` now need to check for ``ret > 0`` to ensure that the FIFO
+   can accept data bytes, instead of ``ret == 1``. The function now returns a lower bound on the
+   number of bytes that can be provided to :c:func:`uart_fifo_fill` without truncation.
 
 Regulator
 =========
@@ -282,6 +291,10 @@ hawkBit
 
 MCUmgr
 ======
+
+* The ``MCUMGR_TRANSPORT_BT_AUTHEN`` Kconfig option from the :kconfig:option:`CONFIG_MCUMGR_TRANSPORT_BT` MCUmgr transport has been replaced with the :kconfig:option:`CONFIG_MCUMGR_TRANSPORT_BT_PERM_RW` Kconfig choice.
+  The requirement for Bluetooth authentication is now indicated by the :kconfig:option:`CONFIG_MCUMGR_TRANSPORT_BT_PERM_RW_AUTHEN` Kconfig option.
+  To remove the default requirement for Bluetooth authentication it is necessary to enable the :kconfig:option:`CONFIG_MCUMGR_TRANSPORT_BT_PERM_RW` Kconfig option in the project configuration.
 
 Modem
 =====

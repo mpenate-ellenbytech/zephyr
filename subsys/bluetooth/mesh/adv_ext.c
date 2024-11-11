@@ -13,6 +13,9 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/mesh.h>
+#if defined(CONFIG_BT_LL_SOFTDEVICE)
+#include <sdc_hci_vs.h>
+#endif
 
 #include "common/bt_str.h"
 
@@ -136,6 +139,28 @@ static inline struct bt_mesh_ext_adv *gatt_adv_get(void)
 	}
 }
 
+static int set_adv_randomness(uint8_t handle, int rand_us)
+{
+#if defined(CONFIG_BT_LL_SOFTDEVICE)
+	struct net_buf *buf;
+	sdc_hci_cmd_vs_set_adv_randomness_t *cmd_params;
+
+	buf = bt_hci_cmd_create(SDC_HCI_OPCODE_CMD_VS_SET_ADV_RANDOMNESS, sizeof(*cmd_params));
+	if (!buf) {
+		LOG_ERR("Could not allocate command buffer");
+		return -ENOMEM;
+	}
+
+	cmd_params = net_buf_add(buf, sizeof(*cmd_params));
+	cmd_params->adv_handle = handle;
+	cmd_params->rand_us = rand_us;
+
+	return bt_hci_cmd_send_sync(SDC_HCI_OPCODE_CMD_VS_SET_ADV_RANDOMNESS, buf, NULL);
+#else
+	return 0;
+#endif /* defined(CONFIG_BT_LL_SOFTDEVICE) */
+}
+
 static int adv_start(struct bt_mesh_ext_adv *ext_adv,
 		     const struct bt_le_adv_param *param,
 		     struct bt_le_ext_adv_start_param *start,
@@ -241,6 +266,28 @@ static const char * const adv_tag_to_str[] = {
 	[BT_MESH_ADV_TAG_PROV]   = "prov adv",
 };
 
+static bool schedule_send_with_mask(struct bt_mesh_ext_adv *ext_adv, int ignore_mask)
+{
+	if (atomic_test_and_clear_bit(ext_adv->flags, ADV_FLAG_PROXY)) {
+		atomic_clear_bit(ext_adv->flags, ADV_FLAG_PROXY_START);
+		(void)bt_le_ext_adv_stop(ext_adv->instance);
+
+		atomic_clear_bit(ext_adv->flags, ADV_FLAG_ACTIVE);
+	}
+
+	if (atomic_test_bit(ext_adv->flags, ADV_FLAG_ACTIVE)) {
+		atomic_set_bit(ext_adv->flags, ADV_FLAG_SCHEDULE_PENDING);
+		return false;
+	} else if ((~ignore_mask) & k_work_busy_get(&ext_adv->work)) {
+		return false;
+	}
+
+	atomic_clear_bit(ext_adv->flags, ADV_FLAG_SCHEDULE_PENDING);
+	k_work_submit(&ext_adv->work);
+
+	return true;
+}
+
 static void send_pending_adv(struct k_work *work)
 {
 	struct bt_mesh_ext_adv *ext_adv;
@@ -314,30 +361,13 @@ static void send_pending_adv(struct k_work *work)
 	}
 
 	if (atomic_test_and_clear_bit(ext_adv->flags, ADV_FLAG_SCHEDULE_PENDING)) {
-		schedule_send(ext_adv);
+		schedule_send_with_mask(ext_adv, K_WORK_RUNNING);
 	}
 }
 
 static bool schedule_send(struct bt_mesh_ext_adv *ext_adv)
 {
-	if (atomic_test_and_clear_bit(ext_adv->flags, ADV_FLAG_PROXY)) {
-		atomic_clear_bit(ext_adv->flags, ADV_FLAG_PROXY_START);
-		(void)bt_le_ext_adv_stop(ext_adv->instance);
-
-		atomic_clear_bit(ext_adv->flags, ADV_FLAG_ACTIVE);
-	}
-
-	if (atomic_test_bit(ext_adv->flags, ADV_FLAG_ACTIVE)) {
-		atomic_set_bit(ext_adv->flags, ADV_FLAG_SCHEDULE_PENDING);
-		return false;
-	} else if (k_work_is_pending(&ext_adv->work)) {
-		return false;
-	}
-
-	atomic_clear_bit(ext_adv->flags, ADV_FLAG_SCHEDULE_PENDING);
-	k_work_submit(&ext_adv->work);
-
-	return true;
+	return schedule_send_with_mask(ext_adv, 0);
 }
 
 void bt_mesh_adv_gatt_update(void)
@@ -424,6 +454,18 @@ void bt_mesh_adv_init(void)
 	for (int i = 0; i < ARRAY_SIZE(advs); i++) {
 		(void)memcpy(&advs[i].adv_param, &adv_param, sizeof(adv_param));
 	}
+
+#if defined(CONFIG_BT_LL_SOFTDEVICE)
+	const sdc_hci_cmd_vs_scan_accept_ext_adv_packets_set_t cmd_params = {
+		.accept_ext_adv_packets = IS_ENABLED(CONFIG_BT_MESH_ADV_EXT_ACCEPT_EXT_ADV_PACKETS),
+	};
+
+	int err = sdc_hci_cmd_vs_scan_accept_ext_adv_packets_set(&cmd_params);
+
+	if (err) {
+		LOG_ERR("Failed to set accept_ext_adv_packets: %d", err);
+	}
+#endif
 }
 
 static struct bt_mesh_ext_adv *adv_instance_find(struct bt_le_ext_adv *instance)
@@ -490,6 +532,15 @@ int bt_mesh_adv_enable(void)
 					   &advs[i].instance);
 		if (err) {
 			return err;
+		}
+
+		if (IS_ENABLED(CONFIG_BT_LL_SOFTDEVICE) &&
+		    IS_ENABLED(CONFIG_BT_MESH_ADV_EXT_FRIEND_SEPARATE) &&
+		    advs[i].tags == BT_MESH_ADV_TAG_BIT_FRIEND) {
+			err = set_adv_randomness(advs[i].instance->handle, 0);
+			if (err) {
+				LOG_ERR("Failed to set zero randomness: %d", err);
+			}
 		}
 	}
 

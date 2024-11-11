@@ -6,6 +6,7 @@
 
 #include <mem.h>
 #include <nordic/nrf_common.dtsi>
+#include <zephyr/dt-bindings/adc/nrf-saadc-nrf54l.h>
 #include <zephyr/dt-bindings/regulator/nrf5x.h>
 
 /delete-node/ &sw_pwm;
@@ -137,6 +138,7 @@
 				interrupts = <74 NRF_DEFAULT_IRQ_PRIORITY>;
 				status = "disabled";
 				endtx-stoptx-supported;
+				frame-timeout-supported;
 			};
 
 			cpuflpr_vpr: vpr@4c000 {
@@ -211,15 +213,17 @@
 				ieee802154-supported;
 				ble-2mbps-supported;
 				ble-coded-phy-supported;
+				cs-supported;
 
 				ieee802154: ieee802154 {
 					compatible = "nordic,nrf-ieee802154";
 					status = "disabled";
 				};
 
-				/* Note: In the nRF Connect SDK the SoftDevice Controller
-				 * is added and set as the default Bluetooth Controller.
-				 */
+				bt_hci_sdc: bt_hci_sdc {
+					compatible = "nordic,bt-hci-sdc";
+					status = "disabled";
+				};
 				bt_hci_controller: bt_hci_controller {
 					compatible = "zephyr,bt-hci-ll-sw-split";
 					status = "disabled";
@@ -268,6 +272,7 @@
 				interrupts = <198 NRF_DEFAULT_IRQ_PRIORITY>;
 				status = "disabled";
 				endtx-stoptx-supported;
+				frame-timeout-supported;
 			};
 
 			i2c21: i2c@c7000 {
@@ -306,6 +311,7 @@
 				interrupts = <199 NRF_DEFAULT_IRQ_PRIORITY>;
 				status = "disabled";
 				endtx-stoptx-supported;
+				frame-timeout-supported;
 			};
 
 			i2c22: i2c@c8000 {
@@ -344,6 +350,7 @@
 				interrupts = <200 NRF_DEFAULT_IRQ_PRIORITY>;
 				status = "disabled";
 				endtx-stoptx-supported;
+				frame-timeout-supported;
 			};
 
 			egu20: egu@c9000 {
@@ -553,6 +560,18 @@
 				interrupts = <260 NRF_DEFAULT_IRQ_PRIORITY>;
 				status = "disabled";
 				endtx-stoptx-supported;
+				frame-timeout-supported;
+			};
+
+			comp: comparator@106000 {
+				/*
+				 * Use compatible "nordic,nrf-comp" to configure as COMP
+				 * Use compatible "nordic,nrf-lpcomp" to configure as LPCOMP
+				 */
+				compatible = "nordic,nrf-comp";
+				reg = <0x106000 0x1000>;
+				status = "disabled";
+				interrupts = <262 NRF_DEFAULT_IRQ_PRIORITY>;
 			};
 
 #ifdef USE_NON_SECURE_ADDRESS_MAP
@@ -596,6 +615,32 @@
 				reg = <0x10e000 0x1000>;
 				interrupts = <270 NRF_DEFAULT_IRQ_PRIORITY>;
 				status = "disabled";
+			};
+
+			power: power@10e000 {
+				compatible = "nordic,nrf-power";
+				reg = <0x10e000 0x1000>;
+				ranges = <0x0 0x10e000 0x1000>;
+				interrupts = <270 NRF_DEFAULT_IRQ_PRIORITY>;
+				status = "disabled";
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				gpregret1: gpregret1@51c {
+					#address-cells = <1>;
+					#size-cells = <1>;
+					compatible = "nordic,nrf-gpregret";
+					reg = <0x51c 0x1>;
+					status = "disabled";
+				};
+
+				gpregret2: gpregret2@520 {
+					#address-cells = <1>;
+					#size-cells = <1>;
+					compatible = "nordic,nrf-gpregret";
+					reg = <0x520 0x1>;
+					status = "disabled";
+				};
 			};
 
 			regulators: regulator@120000 {

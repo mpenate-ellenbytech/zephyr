@@ -13,10 +13,12 @@ config HAS_HW_NRF_BPROT
 	def_bool $(dt_compat_enabled,$(DT_COMPAT_NORDIC_NRF_BPROT))
 
 config HAS_HW_NRF_CC310
-	def_bool $(dt_compat_enabled,$(DT_COMPAT_ARM_CRYPTOCELL_310))
+	def_bool $(dt_compat_enabled,$(DT_COMPAT_ARM_CRYPTOCELL_310)) || \
+		 ($(dt_nodelabel_enabled,psa_rng) && SOC_SERIES_NRF91X)
 
 config HAS_HW_NRF_CC312
-	def_bool $(dt_compat_enabled,$(DT_COMPAT_ARM_CRYPTOCELL_312))
+	def_bool $(dt_compat_enabled,$(DT_COMPAT_ARM_CRYPTOCELL_312)) || \
+		 ($(dt_nodelabel_enabled,psa_rng) && SOC_NRF5340_CPUAPP)
 
 config HAS_HW_NRF_CCM
 	def_bool $(dt_compat_enabled,$(DT_COMPAT_NORDIC_NRF_CCM))
@@ -126,8 +128,14 @@ config HAS_HW_NRF_NVMC_PE
 config HAS_HW_NRF_OSCILLATORS
 	def_bool $(dt_compat_enabled,$(DT_COMPAT_NORDIC_NRF_OSCILLATORS))
 
-config HAS_HW_NRF_PDM
-	def_bool $(dt_compat_enabled,$(DT_COMPAT_NORDIC_NRF_PDM))
+config HAS_HW_NRF_PDM0
+	def_bool $(dt_nodelabel_enabled_with_compat,pdm0,$(DT_COMPAT_NORDIC_NRF_PDM))
+
+config HAS_HW_NRF_PDM20
+	def_bool $(dt_nodelabel_enabled_with_compat,pdm20,$(DT_COMPAT_NORDIC_NRF_PDM))
+
+config HAS_HW_NRF_PDM21
+	def_bool $(dt_nodelabel_enabled_with_compat,pdm21,$(DT_COMPAT_NORDIC_NRF_PDM))
 
 config HAS_HW_NRF_POWER
 	def_bool $(dt_compat_enabled,$(DT_COMPAT_NORDIC_NRF_POWER))
@@ -197,6 +205,9 @@ config HAS_HW_NRF_RADIO_BLE_2M
 
 config HAS_HW_NRF_RADIO_BLE_CODED
 	def_bool $(dt_nodelabel_bool_prop,radio,ble-coded-phy-supported)
+
+config HAS_HW_NRF_RADIO_CS
+	def_bool $(dt_nodelabel_bool_prop,radio,cs-supported)
 
 config HAS_HW_NRF_RADIO_DFE
 	def_bool $(dt_nodelabel_bool_prop,radio,dfe-supported)

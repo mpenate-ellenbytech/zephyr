@@ -38,6 +38,7 @@ include(CheckCXXCompilerFlag)
 # 7.1 llext_* configuration functions
 # 7.2 add_llext_* build control functions
 # 7.3 llext helper functions
+# 8. Script mode handling
 
 ########################################################
 # 1. Zephyr-aware extensions
@@ -3594,6 +3595,86 @@ function(topological_sort)
   set(${TS_RESULT} "${sorted_targets}" PARENT_SCOPE)
 endfunction()
 
+# Usage:
+#   build_info(<tag>... VALUE <value>... )
+#   build_info(<tag>... PATH  <path>... )
+#
+# This function populates updates the build_info.yml info file with exchangable build information
+# related to the current build.
+#
+# Example:
+#   build_info(devicetree files VALUE file1.dts file2.dts file3.dts)
+# Will update the 'devicetree files' key in the build info yaml with the list
+# of files, file1.dts file2.dts file3.dts.
+#
+#   build_info(vendor-specific foo VALUE bar)
+# Will place the vendor specific key 'foo' with value 'bar' in the vendor specific section
+# of the build info file.
+#
+# <tag>...: One of the pre-defined valid CMake keys supported by build info or vendor-specific.
+#           See 'scripts/schemas/build-schema.yml' CMake section for valid tags.
+# VALUE <value>... : value(s) to place in the build_info.yml file.
+# PATH  <path>... : path(s) to place in the build_info.yml file. All paths are converted to CMake
+#                   style. If no conversion is required, for example when paths are already
+#                   guaranteed to be CMake style, then VALUE can also be used.
+function(build_info)
+  set(convert_path FALSE)
+  set(arg_list ${ARGV})
+  list(FIND arg_list VALUE index)
+  if(index EQUAL -1)
+    list(FIND arg_list PATH index)
+    set(convert_path TRUE)
+  endif()
+
+  if(index EQUAL -1)
+    message(FATAL_ERROR "${CMAKE_CURRENT_FUNCTION}(...) missing a required argument: VALUE or PATH")
+  endif()
+
+  yaml_context(EXISTS NAME build_info result)
+  if(NOT result)
+    yaml_load(FILE ${ZEPHYR_BASE}/scripts/schemas/build-schema.yml NAME build_info_schema)
+    if(EXISTS ${CMAKE_BINARY_DIR}/build_info.yml)
+      yaml_load(FILE ${CMAKE_BINARY_DIR}/build_info.yml NAME build_info)
+    else()
+      yaml_create(FILE ${CMAKE_BINARY_DIR}/build_info.yml NAME build_info)
+    endif()
+    yaml_set(NAME build_info KEY version VALUE "0.1.0")
+  endif()
+
+  list(SUBLIST arg_list 0 ${index} keys)
+  list(SUBLIST arg_list ${index} -1 values)
+  list(POP_FRONT values)
+
+  if(convert_path)
+    set(converted_values)
+    foreach(val ${values})
+      cmake_path(SET cmake_path "${val}")
+      list(APPEND converted_values "${cmake_path}")
+    endforeach()
+    set(values "${converted_values}")
+  endif()
+
+  if(ARGV0 STREQUAL "vendor-specific")
+    set(type VALUE)
+  else()
+    set(schema_check ${keys})
+    list(TRANSFORM schema_check PREPEND "mapping;")
+    yaml_get(check NAME build_info_schema KEY mapping cmake ${schema_check})
+    if(check MATCHES ".*-NOTFOUND")
+      message(FATAL_ERROR "${CMAKE_CURRENT_FUNCTION}(...) called with invalid tag: ${keys}")
+    endif()
+
+    yaml_get(type NAME build_info_schema KEY mapping cmake ${schema_check} type)
+    if(type MATCHES "seq|sequence")
+      set(type LIST)
+    else()
+      set(type VALUE)
+    endif()
+  endif()
+
+  yaml_set(NAME build_info KEY cmake ${keys} ${type} "${values}")
+endfunction()
+
 ########################################################
 # 4. Devicetree extensions
 ########################################################
@@ -3611,6 +3692,9 @@ endfunction()
 #   alias at the beginning of a path interchangeably with the full
 #   path to the aliased node in these functions. The usage comments
 #   will make this clear in each case.
+#
+# - Each of these methods also has a sysbuild_dt_* counterpart.
+#   See share/sysbuild/cmake/modules/sysbuild_extensions.cmake.
 
 # Usage:
 #   dt_nodelabel(<var> NODELABEL <label>)
@@ -3638,6 +3722,10 @@ endfunction()
 # NODELABEL <label>  : Node label
 # REQUIRED           : Generate a fatal error if the node-label is not found
 function(dt_nodelabel var)
+  if(NOT DEFINED DEVICETREE_TARGET OR NOT TARGET "${DEVICETREE_TARGET}")
+    message(FATAL_ERROR "dt_nodelabel(${ARGV0} ...) devicetree is not available.")
+  endif()
+
   set(options "REQUIRED")
   set(req_single_args "NODELABEL")
   cmake_parse_arguments(DT_LABEL "${options}" "${req_single_args}" "" ${ARGN})
@@ -3654,7 +3742,7 @@ function(dt_nodelabel var)
     endif()
   endforeach()
 
-  get_target_property(${var} devicetree_target "DT_NODELABEL|${DT_LABEL_NODELABEL}")
+  get_target_property(${var} "${DEVICETREE_TARGET}" "DT_NODELABEL|${DT_LABEL_NODELABEL}")
   if(${${var}} STREQUAL ${var}-NOTFOUND)
     if(DT_LABEL_REQUIRED)
       message(FATAL_ERROR "required nodelabel not found: ${DT_LABEL_NODELABEL}")
@@ -3686,6 +3774,10 @@ endfunction()
 # PROPERTY <prop> : The alias to check
 # REQUIRED        : Generate a fatal error if the alias is not found
 function(dt_alias var)
+  if(NOT DEFINED DEVICETREE_TARGET OR NOT TARGET "${DEVICETREE_TARGET}")
+    message(FATAL_ERROR "dt_alias(${ARGV0} ...) devicetree is not available.")
+  endif()
+
   set(options "REQUIRED")
   set(req_single_args "PROPERTY")
   cmake_parse_arguments(DT_ALIAS "${options}" "${req_single_args}" "" ${ARGN})
@@ -3702,7 +3794,7 @@ function(dt_alias var)
     endif()
   endforeach()
 
-  get_target_property(${var} devicetree_target "DT_ALIAS|${DT_ALIAS_PROPERTY}")
+  get_target_property(${var} "${DEVICETREE_TARGET}" "DT_ALIAS|${DT_ALIAS_PROPERTY}")
   if(${${var}} STREQUAL ${var}-NOTFOUND)
     if(DT_ALIAS_REQUIRED)
       message(FATAL_ERROR "required alias not found: ${DT_ALIAS_PROPERTY}")
@@ -3730,6 +3822,10 @@ endfunction()
 # <var>       : Return variable where the check result will be returned
 # PATH <path> : Node path
 function(dt_node_exists var)
+  if(NOT DEFINED DEVICETREE_TARGET OR NOT TARGET "${DEVICETREE_TARGET}")
+    message(FATAL_ERROR "dt_node_exists(${ARGV0} ...) devicetree is not available.")
+  endif()
+
   set(req_single_args "PATH")
   cmake_parse_arguments(DT_NODE "" "${req_single_args}" "" ${ARGN})
 
@@ -3775,6 +3871,10 @@ endfunction()
 # PATH <path>     : Node path
 # STATUS <status> : Status to check
 function(dt_node_has_status var)
+  if(NOT DEFINED DEVICETREE_TARGET OR NOT TARGET "${DEVICETREE_TARGET}")
+    message(FATAL_ERROR "dt_node_has_status(${ARGV0} ...) devicetree is not available.")
+  endif()
+
   set(req_single_args "PATH;STATUS")
   cmake_parse_arguments(DT_NODE "" "${req_single_args}" "" ${ARGN})
 
@@ -3861,6 +3961,10 @@ endfunction()
 # INDEX <idx>    : Optional index when retrieving a value in an array property
 # REQUIRED       : Generate a fatal error if the property is not found
 function(dt_prop var)
+  if(NOT DEFINED DEVICETREE_TARGET OR NOT TARGET "${DEVICETREE_TARGET}")
+    message(FATAL_ERROR "dt_prop(${ARGV0} ...) devicetree is not available.")
+  endif()
+
   set(options "REQUIRED")
   set(req_single_args "PATH;PROPERTY")
   set(single_args "INDEX")
@@ -3879,7 +3983,7 @@ function(dt_prop var)
   endforeach()
 
   dt_path_internal(canonical "${DT_PROP_PATH}")
-  get_property(exists TARGET devicetree_target
+  get_property(exists TARGET "${DEVICETREE_TARGET}"
       PROPERTY "DT_PROP|${canonical}|${DT_PROP_PROPERTY}"
       SET
   )
@@ -3892,7 +3996,7 @@ function(dt_prop var)
     return()
   endif()
 
-  get_target_property(val devicetree_target
+  get_target_property(val "${DEVICETREE_TARGET}"
       "DT_PROP|${canonical}|${DT_PROP_PROPERTY}"
   )
 
@@ -3921,6 +4025,10 @@ endfunction()
 # INDEX <idx>            : Optional index when retrieving a value in an array property
 
 function(dt_comp_path var)
+  if(NOT DEFINED DEVICETREE_TARGET OR NOT TARGET "${DEVICETREE_TARGET}")
+    message(FATAL_ERROR "dt_comp_path(${ARGV0} ...) devicetree is not available.")
+  endif()
+
   set(req_single_args "COMPATIBLE")
   set(single_args "INDEX")
   cmake_parse_arguments(DT_COMP "" "${req_single_args};${single_args}" "" ${ARGN})
@@ -3937,7 +4045,7 @@ function(dt_comp_path var)
     endif()
   endforeach()
 
-  get_property(exists TARGET devicetree_target
+  get_property(exists TARGET "${DEVICETREE_TARGET}"
       PROPERTY "DT_COMP|${DT_COMP_COMPATIBLE}"
       SET
   )
@@ -3947,7 +4055,7 @@ function(dt_comp_path var)
     return()
   endif()
 
-  get_target_property(val devicetree_target
+  get_target_property(val "${DEVICETREE_TARGET}"
       "DT_COMP|${DT_COMP_COMPATIBLE}"
   )
 
@@ -3976,6 +4084,10 @@ endfunction()
 # <var>          : Return variable where the property value will be stored
 # PATH <path>    : Node path
 function(dt_num_regs var)
+  if(NOT DEFINED DEVICETREE_TARGET OR NOT TARGET "${DEVICETREE_TARGET}")
+    message(FATAL_ERROR "dt_num_regs(${ARGV0} ...) devicetree is not available.")
+  endif()
+
   set(req_single_args "PATH")
   cmake_parse_arguments(DT_REG "" "${req_single_args}" "" ${ARGN})
 
@@ -3992,7 +4104,7 @@ function(dt_num_regs var)
   endforeach()
 
   dt_path_internal(canonical "${DT_REG_PATH}")
-  get_target_property(${var} devicetree_target "DT_REG|${canonical}|NUM")
+  get_target_property(${var} "${DEVICETREE_TARGET}" "DT_REG|${canonical}|NUM")
 
   set(${var} ${${var}} PARENT_SCOPE)
 endfunction()
@@ -4022,6 +4134,10 @@ endfunction()
 # INDEX <idx>    : Register block index number
 # NAME <name>    : Register block name
 function(dt_reg_addr var)
+  if(NOT DEFINED DEVICETREE_TARGET OR NOT TARGET "${DEVICETREE_TARGET}")
+    message(FATAL_ERROR "dt_reg_addr(${ARGV0} ...) devicetree is not available.")
+  endif()
+
   set(req_single_args "PATH")
   set(single_args "INDEX;NAME")
   cmake_parse_arguments(DT_REG "" "${req_single_args};${single_args}" "" ${ARGN})
@@ -4051,7 +4167,7 @@ function(dt_reg_addr var)
   endif()
 
   dt_path_internal(canonical "${DT_REG_PATH}")
-  get_target_property(${var}_list devicetree_target "DT_REG|${canonical}|ADDR")
+  get_target_property(${var}_list "${DEVICETREE_TARGET}" "DT_REG|${canonical}|ADDR")
 
   list(GET ${var}_list ${DT_REG_INDEX} ${var})
 
@@ -4082,6 +4198,10 @@ endfunction()
 # INDEX <idx>    : Register block index number
 # NAME <name>    : Register block name
 function(dt_reg_size var)
+  if(NOT DEFINED DEVICETREE_TARGET OR NOT TARGET "${DEVICETREE_TARGET}")
+    message(FATAL_ERROR "dt_reg_size(${ARGV0} ...) devicetree is not available.")
+  endif()
+
   set(req_single_args "PATH")
   set(single_args "INDEX;NAME")
   cmake_parse_arguments(DT_REG "" "${req_single_args};${single_args}" "" ${ARGN})
@@ -4111,7 +4231,7 @@ function(dt_reg_size var)
   endif()
 
   dt_path_internal(canonical "${DT_REG_PATH}")
-  get_target_property(${var}_list devicetree_target "DT_REG|${canonical}|SIZE")
+  get_target_property(${var}_list "${DEVICETREE_TARGET}" "DT_REG|${canonical}|SIZE")
 
   list(GET ${var}_list ${DT_REG_INDEX} ${var})
 
@@ -4159,6 +4279,10 @@ endfunction()
 # <var>           : Return variable
 # PROPERTY <prop> : Chosen property
 function(dt_has_chosen var)
+  if(NOT DEFINED DEVICETREE_TARGET OR NOT TARGET "${DEVICETREE_TARGET}")
+    message(FATAL_ERROR "dt_has_chosen(${ARGV0} ...) devicetree is not available.")
+  endif()
+
   set(req_single_args "PROPERTY")
   cmake_parse_arguments(DT_CHOSEN "" "${req_single_args}" "" ${ARGN})
 
@@ -4174,7 +4298,7 @@ function(dt_has_chosen var)
     endif()
   endforeach()
 
-  get_target_property(exists devicetree_target "DT_CHOSEN|${DT_CHOSEN_PROPERTY}")
+  get_target_property(exists "${DEVICETREE_TARGET}" "DT_CHOSEN|${DT_CHOSEN_PROPERTY}")
 
   if(${exists} STREQUAL exists-NOTFOUND)
     set(${var} FALSE PARENT_SCOPE)
@@ -4194,6 +4318,10 @@ endfunction()
 # <var>           : Return variable where the node path will be stored
 # PROPERTY <prop> : Chosen property
 function(dt_chosen var)
+  if(NOT DEFINED DEVICETREE_TARGET OR NOT TARGET "${DEVICETREE_TARGET}")
+    message(FATAL_ERROR "dt_chosen(${ARGV0} ...) devicetree is not available.")
+  endif()
+
   set(req_single_args "PROPERTY")
   cmake_parse_arguments(DT_CHOSEN "" "${req_single_args}" "" ${ARGN})
 
@@ -4209,7 +4337,7 @@ function(dt_chosen var)
     endif()
   endforeach()
 
-  get_target_property(${var} devicetree_target "DT_CHOSEN|${DT_CHOSEN_PROPERTY}")
+  get_target_property(${var} "${DEVICETREE_TARGET}" "DT_CHOSEN|${DT_CHOSEN_PROPERTY}")
 
   if(${${var}} STREQUAL ${var}-NOTFOUND)
     set(${var} PARENT_SCOPE)
@@ -4281,7 +4409,7 @@ endfunction()
 # to an existing node. Set it to FALSE otherwise. See
 # dt_path_internal for a definition and examples of 'canonical' paths.
 function(dt_path_internal_exists var path)
-  get_target_property(path_prop devicetree_target "DT_NODE|${path}")
+  get_target_property(path_prop "${DEVICETREE_TARGET}" "DT_NODE|${path}")
   if (path_prop)
     set(${var} TRUE PARENT_SCOPE)
   else()
@@ -5697,3 +5825,47 @@ function(llext_filter_zephyr_flags filter flags outvar)
 
   set(${outvar} ${zephyr_filtered_flags} PARENT_SCOPE)
 endfunction()
+
+########################################################
+# 8. Script mode handling
+########################################################
+#
+# Certain features are not available when CMake is used in script mode.
+# For example custom targets, and thus features related to custom targets, such
+# as target properties are not available in script mode.
+#
+# This section defines behavior for functions whose default implementation does
+# not work correctly in script mode.
+#
+# The script mode function can be a simple stub or a more complex solution
+# depending on the exact use of the function in script mode.
+#
+# Current Zephyr CMake scripts which includes `extensions.cmake` in script mode
+# are: package_helper.cmake, verify-toolchain.cmake
+#
+
+if(CMAKE_SCRIPT_MODE_FILE)
+  # add_custom_target and set_target_properties are not supported in script mode.
+  # However, Zephyr CMake functions like `zephyr_get()`, `zephyr_create_scope()`,
+  # llext functions creates or relies on custom CMake targets.
+  function(add_custom_target)
+    # This silence the error: 'add_custom_target command is not scriptable'
+  endfunction()
+
+  function(set_target_properties)
+    # This silence the error: 'set_target_properties command is not scriptable'
+  endfunction()
+
+  function(zephyr_set variable)
+    # This silence the error: zephyr_set(...  SCOPE <scope>) doesn't exists.
+  endfunction()
+
+  # Build info creates a custom target for handling of build info.
+  # build_info is not needed in script mode but still called by Zephyr CMake
+  # modules. Therefore disable build_info(...) in when including
+  # extensions.cmake in script mode.
+  function(build_info)
+    # This silence the error: 'YAML context 'build_info' does not exist.'
+    #                         'Remember to create a YAML context'
+  endfunction()
+endif()

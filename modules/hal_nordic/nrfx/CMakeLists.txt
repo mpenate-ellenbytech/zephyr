@@ -44,6 +44,14 @@ zephyr_compile_definitions_ifdef(CONFIG_SOC_NRF54H20_CPUPPR     NRF54H20_XXAA
                                                                 NRF_PPR)
 zephyr_compile_definitions_ifdef(CONFIG_SOC_NRF54H20_CPUFLPR    NRF54H20_XXAA
                                                                 NRF_FLPR)
+zephyr_compile_definitions_ifdef(CONFIG_SOC_NRF54H20_ENGB_CPUAPP NRF54H20_ENGB_XXAA
+                                                                 NRF_APPLICATION)
+zephyr_compile_definitions_ifdef(CONFIG_SOC_NRF54H20_ENGB_CPURAD NRF54H20_ENGB_XXAA
+                                                                 NRF_RADIOCORE)
+zephyr_compile_definitions_ifdef(CONFIG_SOC_NRF54H20_ENGB_CPUPPR NRF54H20_ENGB_XXAA
+                                                                 NRF_PPR)
+zephyr_compile_definitions_ifdef(CONFIG_SOC_NRF54H20_ENGB_CPUFLPR NRF54H20_ENGB_XXAA
+                                                                  NRF_FLPR)
 zephyr_compile_definitions_ifdef(CONFIG_SOC_NRF54L15_ENGA       NRF54L15_ENGA_XXAA)
 zephyr_compile_definitions_ifdef(CONFIG_SOC_NRF54L15_ENGA_CPUAPP NRF_APPLICATION)
 zephyr_compile_definitions_ifdef(CONFIG_SOC_NRF54L15_ENGA_CPUFLPR NRF_FLPR)
@@ -67,11 +75,14 @@ zephyr_compile_definitions_ifdef(CONFIG_SOC_NRF9230_ENGB_CPUPPR NRF9230_ENGB_XXA
 zephyr_compile_definitions_ifdef(CONFIG_NRF_APPROTECT_LOCK
                                  ENABLE_APPROTECT)
 zephyr_compile_definitions_ifdef(CONFIG_NRF_APPROTECT_USER_HANDLING
-                                 ENABLE_APPROTECT_USER_HANDLING)
+                                 ENABLE_APPROTECT_USER_HANDLING
+                                 ENABLE_AUTHENTICATED_APPROTECT)
 zephyr_compile_definitions_ifdef(CONFIG_NRF_SECURE_APPROTECT_LOCK
-                                 ENABLE_SECURE_APPROTECT)
+                                 ENABLE_SECURE_APPROTECT
+                                 ENABLE_SECUREAPPROTECT)
 zephyr_compile_definitions_ifdef(CONFIG_NRF_SECURE_APPROTECT_USER_HANDLING
-                                 ENABLE_SECURE_APPROTECT_USER_HANDLING)
+                                 ENABLE_SECURE_APPROTECT_USER_HANDLING
+                                 ENABLE_AUTHENTICATED_SECUREAPPROTECT)
 zephyr_library_compile_definitions_ifdef(CONFIG_NRF_TRACE_PORT
                                  ENABLE_TRACE)
 
@@ -95,7 +106,9 @@ zephyr_library_sources_ifdef(CONFIG_SOC_NRF52840       ${MDK_DIR}/system_nrf5284
 zephyr_library_sources_ifdef(CONFIG_SOC_NRF5340_CPUAPP ${MDK_DIR}/system_nrf5340_application.c)
 zephyr_library_sources_ifdef(CONFIG_SOC_NRF5340_CPUNET ${MDK_DIR}/system_nrf5340_network.c)
 zephyr_library_sources_ifdef(CONFIG_SOC_SERIES_NRF54HX ${MDK_DIR}/system_nrf54h.c)
-zephyr_library_sources_ifdef(CONFIG_SOC_SERIES_NRF54LX ${MDK_DIR}/system_nrf54l.c)
+if(CONFIG_SOC_SERIES_NRF54LX OR CONFIG_SOC_SERIES_BSIM_NRF54LX)
+  zephyr_library_sources(${MDK_DIR}/system_nrf54l.c)
+endif()
 zephyr_library_sources_ifdef(CONFIG_SOC_SERIES_NRF91X  ${MDK_DIR}/system_nrf91.c)
 zephyr_library_sources_ifdef(CONFIG_SOC_SERIES_NRF92X  ${MDK_DIR}/system_nrf92.c)
 
@@ -219,6 +232,10 @@ mdk_svd_ifdef(CONFIG_SOC_NRF54H20_CPUAPP      nrf54h20_application.svd)
 mdk_svd_ifdef(CONFIG_SOC_NRF54H20_CPUPPR      nrf54h20_ppr.svd)
 mdk_svd_ifdef(CONFIG_SOC_NRF54H20_CPUFLPR     nrf54h20_flpr.svd)
 mdk_svd_ifdef(CONFIG_SOC_NRF54H20_CPURAD      nrf54h20_radiocore.svd)
+mdk_svd_ifdef(CONFIG_SOC_NRF54H20_ENGB_CPUAPP  nrf54h20_engb_application.svd)
+mdk_svd_ifdef(CONFIG_SOC_NRF54H20_ENGB_CPUPPR  nrf54h20_engb_ppr.svd)
+mdk_svd_ifdef(CONFIG_SOC_NRF54H20_ENGB_CPUFLPR nrf54h20_engb_flpr.svd)
+mdk_svd_ifdef(CONFIG_SOC_NRF54H20_ENGB_CPURAD  nrf54h20_engb_radiocore.svd)
 mdk_svd_ifdef(CONFIG_SOC_NRF54L15_ENGA_CPUAPP nrf54l15_enga_application.svd)
 mdk_svd_ifdef(CONFIG_SOC_NRF54L15_ENGA_CPUFLPR nrf54l15_enga_flpr.svd)
 mdk_svd_ifdef(CONFIG_SOC_NRF54L15_CPUAPP      nrf54l15_application.svd)
@@ -229,3 +246,4 @@ mdk_svd_ifdef(CONFIG_SOC_NRF9160              nrf9160.svd)
 mdk_svd_ifdef(CONFIG_SOC_NRF9230_ENGB_CPUAPP  nrf9230_engb_application.svd)
 mdk_svd_ifdef(CONFIG_SOC_NRF9230_ENGB_CPUPPR  nrf9230_engb_ppr.svd)
 mdk_svd_ifdef(CONFIG_SOC_NRF9230_ENGB_CPURAD  nrf9230_engb_radiocore.svd)
+build_info(vendor-specific nordic svdfile VALUE ${SOC_SVD_FILE})

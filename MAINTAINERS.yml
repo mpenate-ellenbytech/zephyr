@@ -975,7 +975,6 @@ Documentation:
     - doc/images/Zephyr-Kite-in-tree.png
     - doc/index-tex.rst
     - doc/index.rst
-    - doc/kconfig.rst
     - doc/templates/sample.tmpl
     - doc/templates/board.tmpl
     - boards/index.rst
@@ -1156,6 +1155,23 @@ Release Notes:
     - "area: Clock control"
   tests:
     - drivers.clock
+
+"Drivers: Comparator":
+  status: maintained
+  maintainers:
+    - bjarki-andreasen
+  files:
+    - drivers/comparator/
+    - dts/bindings/comparator/
+    - include/zephyr/drivers/comparator.h
+    - include/zephyr/drivers/comparator/
+    - tests/drivers/build_all/comparator/
+    - tests/drivers/comparator/
+    - doc/hardware/peripherals/comparator.rst
+  labels:
+    - "area: Comparator"
+  tests:
+    - drivers.comparator
 
 "Drivers: Console":
   status: odd fixes

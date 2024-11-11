@@ -70,9 +70,9 @@ find_package(Dtc 1.4.6)
 #
 # Optional variables:
 # - BOARD: board name to use when looking for DTS_SOURCE
-# - BOARD_DIR: board directory to use when looking for DTS_SOURCE
+# - BOARD_DIRECTORIES: list of board directories to use when looking for DTS_SOURCE
 # - BOARD_REVISION_STRING: used when looking for a board revision's
-#   devicetree overlay file in BOARD_DIR
+#   devicetree overlay file in one of the BOARD_DIRECTORIES
 # - DTC_OVERLAY_FILE: list of devicetree overlay files which will be
 #   used to modify or extend the base devicetree.
 # - EXTRA_DTC_OVERLAY_FILE: list of extra devicetree overlay files.
@@ -86,7 +86,7 @@ find_package(Dtc 1.4.6)
 #   C preprocessor when generating the devicetree from DTS_SOURCE
 # - DTS_SOURCE: the devicetree source file to use may be pre-set
 #   with this variable; otherwise, it defaults to
-#   ${BOARD_DIR}/${BOARD}.dts
+#   ${BOARD_DIRECTORIES}/<normalized_board_target>.dts
 #
 # Variables set by this module and not mentioned above are for internal
 # use only, and may be removed, renamed, or re-purposed without prior notice.
@@ -117,6 +117,8 @@ set(GEN_DTS_CMAKE_SCRIPT        ${DT_SCRIPTS}/gen_dts_cmake.py)
 # The generated information itself, which we include() after
 # creating it.
 set(DTS_CMAKE                   ${PROJECT_BINARY_DIR}/dts.cmake)
+# The CMake target to be initialized by including ${DTS_CMAKE}.
+set(DEVICETREE_TARGET           devicetree_target)
 
 # The location of a file containing known vendor prefixes, relative to
 # each element of DTS_ROOT. Users can define their own in their own
@@ -127,28 +129,30 @@ if(NOT DEFINED DTS_SOURCE)
   zephyr_build_string(board_string SHORT shortened_board_string
                       BOARD ${BOARD} BOARD_QUALIFIERS ${BOARD_QUALIFIERS}
   )
-  if(EXISTS ${BOARD_DIR}/${shortened_board_string}.dts AND NOT BOARD_${BOARD}_SINGLE_SOC)
-    message(FATAL_ERROR "Board ${ZFILE_BOARD} defines multiple SoCs.\nShortened file name "
-            "(${shortened_board_string}.dts) not allowed, use '<board>_<soc>.dts' naming"
-    )
-  elseif(EXISTS ${BOARD_DIR}/${board_string}.dts AND EXISTS ${BOARD_DIR}/${shortened_board_string}.dts)
-    message(FATAL_ERROR "Conflicting file names discovered. Cannot use both "
-            "${board_string}.dts and ${shortened_board_string}.dts. "
-            "Please choose one naming style, ${board_string}.dts is recommended."
-    )
-  elseif(EXISTS ${BOARD_DIR}/${board_string}.dts)
-    set(DTS_SOURCE ${BOARD_DIR}/${board_string}.dts)
-  elseif(EXISTS ${BOARD_DIR}/${shortened_board_string}.dts)
-    set(DTS_SOURCE ${BOARD_DIR}/${shortened_board_string}.dts)
-  endif()
+  foreach(dir ${BOARD_DIRECTORIES})
+    if(EXISTS ${dir}/${shortened_board_string}.dts AND NOT BOARD_${BOARD}_SINGLE_SOC)
+      message(FATAL_ERROR "Board ${ZFILE_BOARD} defines multiple SoCs.\nShortened file name "
+              "(${shortened_board_string}.dts) not allowed, use '<board>_<soc>.dts' naming"
+      )
+    elseif(EXISTS ${dir}/${board_string}.dts AND EXISTS ${dir}/${shortened_board_string}.dts)
+      message(FATAL_ERROR "Conflicting file names discovered. Cannot use both "
+              "${board_string}.dts and ${shortened_board_string}.dts. "
+              "Please choose one naming style, ${board_string}.dts is recommended."
+      )
+    elseif(EXISTS ${dir}/${board_string}.dts)
+      set(DTS_SOURCE ${dir}/${board_string}.dts)
+    elseif(EXISTS ${dir}/${shortened_board_string}.dts)
+      set(DTS_SOURCE ${dir}/${shortened_board_string}.dts)
+    endif()
+  endforeach()
 endif()
 
 if(EXISTS ${DTS_SOURCE})
   # We found a devicetree. Append all relevant dts overlays we can find...
-  zephyr_file(CONF_FILES ${BOARD_DIR} DTS DTS_SOURCE)
+  zephyr_file(CONF_FILES ${BOARD_DIRECTORIES} DTS DTS_SOURCE)
 
   zephyr_file(
-    CONF_FILES ${BOARD_DIR}
+    CONF_FILES ${BOARD_DIRECTORIES}
     DTS no_rev_suffix_dts_board_overlays
     BOARD ${BOARD}
     BOARD_QUALIFIERS ${BOARD_QUALIFIERS}
@@ -178,6 +182,7 @@ set(dts_files
 if(DTC_OVERLAY_FILE)
   zephyr_list(TRANSFORM DTC_OVERLAY_FILE NORMALIZE_PATHS
               OUTPUT_VARIABLE DTC_OVERLAY_FILE_AS_LIST)
+  build_info(devicetree user-files PATH ${DTC_OVERLAY_FILE_AS_LIST})
   list(APPEND
     dts_files
     ${DTC_OVERLAY_FILE_AS_LIST}
@@ -187,6 +192,7 @@ endif()
 if(EXTRA_DTC_OVERLAY_FILE)
   zephyr_list(TRANSFORM EXTRA_DTC_OVERLAY_FILE NORMALIZE_PATHS
               OUTPUT_VARIABLE EXTRA_DTC_OVERLAY_FILE_AS_LIST)
+  build_info(devicetree extra-user-files PATH ${EXTRA_DTC_OVERLAY_FILE_AS_LIST})
   list(APPEND
     dts_files
     ${EXTRA_DTC_OVERLAY_FILE_AS_LIST}
@@ -383,3 +389,7 @@ elseif(stderr)
   message(WARNING "dtc raised one or more warnings:\n${stderr}")
 endif()
 endif(DTC)
+
+build_info(devicetree files PATH ${dts_files})
+build_info(devicetree include-dirs PATH ${DTS_ROOT_SYSTEM_INCLUDE_DIRS})
+build_info(devicetree bindings-dirs PATH ${DTS_ROOT_BINDINGS})

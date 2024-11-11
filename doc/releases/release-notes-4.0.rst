@@ -145,6 +145,14 @@ Drivers and Sensors
 
 * Clock control
 
+* Comparator
+
+  * Introduced comparator device driver subsystem selected with :kconfig:option:`CONFIG_COMPARATOR`
+  * Introduced comparator shell commands selected with :kconfig:option:`CONFIG_COMPARATOR_SHELL`
+  * Added support for Nordic nRF COMP (:dtcompatible:`nordic,nrf-comp`)
+  * Added support for Nordic nRF LPCOMP (:dtcompatible:`nordic,nrf-lpcomp`)
+  * Added support for NXP Kinetis ACMP (:dtcompatible:`nxp,kinetis-acmp`)
+
 * Counter
 
 * DAC
@@ -228,6 +236,8 @@ Drivers and Sensors
 * Serial
 
   * LiteX: Renamed the ``compatible`` from ``litex,uart0`` to :dtcompatible:`litex,uart`.
+  * Nordic: Removed ``CONFIG_UART_n_GPIO_MANAGEMENT`` Kconfig options (where n is an instance
+    index) which had no use after pinctrl driver was introduced.
 
 * SPI
 

@@ -23,19 +23,24 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(flash_nrf);
 
-#if DT_NODE_HAS_STATUS(DT_INST(0, nordic_nrf51_flash_controller), okay)
+#if DT_NODE_HAS_STATUS_OKAY(DT_INST(0, nordic_nrf51_flash_controller))
 #define DT_DRV_COMPAT nordic_nrf51_flash_controller
-#elif DT_NODE_HAS_STATUS(DT_INST(0, nordic_nrf52_flash_controller), okay)
+#elif DT_NODE_HAS_STATUS_OKAY(DT_INST(0, nordic_nrf52_flash_controller))
 #define DT_DRV_COMPAT nordic_nrf52_flash_controller
-#elif DT_NODE_HAS_STATUS(DT_INST(0, nordic_nrf53_flash_controller), okay)
+#elif DT_NODE_HAS_STATUS_OKAY(DT_INST(0, nordic_nrf53_flash_controller))
 #define DT_DRV_COMPAT nordic_nrf53_flash_controller
-#elif DT_NODE_HAS_STATUS(DT_INST(0, nordic_nrf91_flash_controller), okay)
+#elif DT_NODE_HAS_STATUS_OKAY(DT_INST(0, nordic_nrf91_flash_controller))
 #define DT_DRV_COMPAT nordic_nrf91_flash_controller
 #else
 #error No matching compatible for soc_flash_nrf.c
 #endif
 
 #define SOC_NV_FLASH_NODE DT_INST(0, soc_nv_flash)
+
+#if CONFIG_TRUSTED_EXECUTION_NONSECURE && USE_PARTITION_MANAGER
+#include <soc_secure.h>
+#include <pm_config.h>
+#endif /* CONFIG_TRUSTED_EXECUTION_NONSECURE && USE_PARTITION_MANAGER */
 
 #ifndef CONFIG_SOC_FLASH_NRF_RADIO_SYNC_NONE
 #define FLASH_SLOT_WRITE     7500
@@ -163,6 +168,12 @@ static int flash_nrf_read(const struct device *dev, off_t addr,
 	if (within_uicr) {
 		nrf_buffer_read_91_uicr(data, (uint32_t)addr, len);
 		return 0;
+	}
+#endif
+
+#if CONFIG_TRUSTED_EXECUTION_NONSECURE && USE_PARTITION_MANAGER && PM_APP_ADDRESS
+	if (addr < PM_APP_ADDRESS) {
+		return soc_secure_mem_read(data, (void *)addr, len);
 	}
 #endif
 

@@ -8,6 +8,7 @@
 
 #include <nordic/nrf54h20_cpuapp.dtsi>
 #include "nrf54h20dk_nrf54h20-common.dtsi"
+#include "nrf54h20dk_bicr.dtsi"
 
 /delete-node/ &cpurad_cpusys_ipc;
 /delete-node/ &cpusec_cpurad_ipc;
@@ -26,6 +27,7 @@
 		zephyr,bt-hci = &bt_hci_ipc0;
 		nordic,802154-spinel-ipc = &ipc0;
 		zephyr,canbus = &can120;
+		zephyr,entropy = &prng;
 	};
 
 	aliases {
@@ -106,6 +108,11 @@
 			pwms = <&pwm130 0 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
 		};
 	};
+
+	prng: prng {
+		compatible = "nordic,entropy-prng";
+		status = "okay";
+	};
 };
 
 &cpuapp_ram0x_region {
@@ -113,14 +120,6 @@
 };
 
 &etr_buf_ram0x_region {
-	status = "okay";
-};
-
-&cpuapp_cpurad_ram0x_region {
-	status = "okay";
-};
-
-&shared_ram3x_region {
 	status = "okay";
 };
 
@@ -256,7 +255,6 @@ ipc0: &cpuapp_cpurad_ipc {
 	pinctrl-0 = <&uart136_default>;
 	pinctrl-1 = <&uart136_sleep>;
 	pinctrl-names = "default", "sleep";
-	hw-flow-control;
 };
 
 &gpio6 {

@@ -168,7 +168,7 @@ config NET_IPV4_MAPPING_TO_IPV6
 config NET_SHELL
 	bool "Network shell utilities"
 	select SHELL
-	select NET_IPV4_IGMP if NET_IPV4
+	select NET_IPV4_IGMP if NET_NATIVE_IPV4
 	select REQUIRES_FLOAT_PRINTF
 	help
 	  Activate shell module that provides network commands like
@@ -663,7 +663,7 @@ config NET_BUF_TX_COUNT
 	  Each data buffer will occupy CONFIG_NET_BUF_DATA_SIZE + smallish
 	  header (sizeof(struct net_buf)) amount of data.
 
-choice
+choice NET_PKT_DATA_ALLOC_TYPE
 	prompt "Network packet data allocator type"
 	default NET_BUF_FIXED_DATA_SIZE
 	help
