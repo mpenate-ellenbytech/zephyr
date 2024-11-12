@@ -174,7 +174,7 @@ static inline struct coap_client_option coap_client_option_initial_block2(void)
 	struct coap_client_option block2 = {
 		.code = COAP_OPTION_BLOCK2,
 		.len = 1,
-		.value[0] = coap_bytes_to_block_size(CONFIG_COAP_CLIENT_BLOCK_SIZE),
+		.value = {(uint8_t)coap_bytes_to_block_size(CONFIG_COAP_CLIENT_BLOCK_SIZE),0,0,0,0,0,0,0,0,0,0,0},
 	};
 
 	return block2;
