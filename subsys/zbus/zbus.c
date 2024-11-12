@@ -128,6 +128,10 @@ static inline int _zbus_vded_exec(const struct zbus_channel *chan, k_timepoint_t
 		COND_CODE_1(CONFIG_ZBUS_MSG_SUBSCRIBER_NET_BUF_POOL_ISOLATION,
 			    (chan->data->msg_subscriber_pool), (&_zbus_msg_subscribers_pool));
 
+	if (pool == NULL) {
+		pool = &_zbus_msg_subscribers_pool;
+	}
+
 	buf = _zbus_create_net_buf(pool, zbus_chan_msg_size(chan), sys_timepoint_timeout(end_time));
 
 	_ZBUS_ASSERT(buf != NULL, "net_buf zbus_msg_subscribers_pool is "
