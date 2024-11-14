@@ -52,7 +52,7 @@ config BT_L2CAP_DYNAMIC_CHANNEL
 	  allowing the creation of dynamic L2CAP Channels.
 
 config BT_L2CAP_ECRED
-	bool "L2CAP Enhanced Credit Based Flow Control support"
+	bool "L2CAP Enhanced Credit Based Flow Control support [EXPERIMENTAL]"
 	depends on BT_L2CAP_DYNAMIC_CHANNEL
 	help
 	  This option enables support for LE Connection oriented Channels with
@@ -69,5 +69,13 @@ config BT_L2CAP_SEG_RECV
 
 	  This API enforces conformance with L2CAP TS, but is otherwise as
 	  flexible and semantically simple as possible.
+
+config BT_L2CAP_RECONFIGURE_EXPLICIT
+	bool "L2CAP Explicit reconfigure API [EXPERIMENTAL]"
+	select EXPERIMENTAL
+	help
+
+	  Enable API for explicit reconfiguration of an L2CAP channel's MTU and
+	  MPS.
 
 endmenu

@@ -6,6 +6,7 @@
 
 #include <arm/armv8-m.dtsi>
 #include <nordic/nrf_common.dtsi>
+#include <zephyr/dt-bindings/adc/nrf-saadc-v3.h>
 
 / {
 	cpus {
@@ -33,7 +34,7 @@
 	};
 
 	chosen {
-		zephyr,entropy = &rng_hci;
+		zephyr,entropy = &cryptocell;
 		zephyr,flash-controller = &flash_controller;
 	};
 
@@ -102,7 +103,7 @@
 			reg = <0x50844000 0x1000>, <0x50845000 0x1000>;
 			reg-names = "wrapper", "core";
 			interrupts = <68 NRF_DEFAULT_IRQ_PRIORITY>;
-			status = "disabled";
+			status = "okay";
 		};
 	};
 

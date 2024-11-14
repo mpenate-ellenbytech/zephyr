@@ -11,7 +11,7 @@
 / {
 
 	chosen {
-		zephyr,bt-hci = &bt_hci_controller;
+		zephyr,bt-hci = &bt_hci_sdc;
 		zephyr,entropy = &rng;
 		zephyr,flash-controller = &flash_controller;
 	};
@@ -115,12 +115,13 @@
 				status = "disabled";
 			};
 
-			/* Note: In the nRF Connect SDK another Bluetooth controller
-			 * is added and set as the default.
-			 */
+			bt_hci_sdc: bt_hci_sdc {
+				compatible = "nordic,bt-hci-sdc";
+				status = "okay";
+			};
 			bt_hci_controller: bt_hci_controller {
 				compatible = "zephyr,bt-hci-ll-sw-split";
-				status = "okay";
+				status = "disabled";
 			};
 		};
 
@@ -312,7 +313,6 @@
 			reg = <0x40013000 0x1000>;
 			interrupts = <19 NRF_DEFAULT_IRQ_PRIORITY>;
 			status = "disabled";
-			#io-channel-cells = <1>;
 		};
 
 		egu0: swi0: egu@40014000 {

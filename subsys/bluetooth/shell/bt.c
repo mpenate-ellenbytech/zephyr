@@ -982,6 +982,136 @@ void subrate_changed(struct bt_conn *conn,
 }
 #endif
 
+#if defined(CONFIG_BT_CHANNEL_SOUNDING)
+void print_remote_cs_capabilities(struct bt_conn *conn, struct bt_conn_le_cs_capabilities *params)
+{
+	shell_print(
+		ctx_shell,
+		"Received remote channel sounding capabilities:\n"
+		"- Num CS configurations: %d\n"
+		"- Max consecutive CS procedures: %d\n"
+		"- Num antennas supported: %d\n"
+		"- Max antenna paths supported: %d\n"
+		"- Initiator role supported: %s\n"
+		"- Reflector role supported: %s\n"
+		"- Mode 3 supported: %s\n"
+		"- RTT AA only supported: %s\n"
+		"- RTT AA only is 10ns precise: %s\n"
+		"- RTT AA only N: %d\n"
+		"- RTT sounding supported: %s\n"
+		"- RTT sounding is 10ns precise: %s\n"
+		"- RTT sounding N: %d\n"
+		"- RTT random payload supported: %s\n"
+		"- RTT random payload is 10ns precise: %s\n"
+		"- RTT random payload N: %d\n"
+		"- Phase-based NADM with sounding sequences supported: %s\n"
+		"- Phase-based NADM with random sequences supported: %s\n"
+		"- CS Sync 2M PHY supported: %s\n"
+		"- CS Sync 2M 2BT PHY supported: %s\n"
+		"- CS without transmitter FAE supported: %s\n"
+		"- Channel selection algorithm #3c supported: %s\n"
+		"- Phase-based ranging from RTT sounding sequence supported: %s\n"
+		"- T_IP1 times supported: 0x%04x\n"
+		"- T_IP2 times supported: 0x%04x\n"
+		"- T_FCS times supported: 0x%04x\n"
+		"- T_PM times supported: 0x%04x\n"
+		"- T_SW time supported: %d us\n"
+		"- TX SNR capability: 0x%02x",
+		params->num_config_supported, params->max_consecutive_procedures_supported,
+		params->num_antennas_supported, params->max_antenna_paths_supported,
+		params->initiator_supported ? "Yes" : "No",
+		params->reflector_supported ? "Yes" : "No", params->mode_3_supported ? "Yes" : "No",
+		params->rtt_aa_only_precision == BT_CONN_LE_CS_RTT_AA_ONLY_NOT_SUPP ? "No" : "Yes",
+		params->rtt_aa_only_precision == BT_CONN_LE_CS_RTT_AA_ONLY_10NS ? "Yes" : "No",
+		params->rtt_aa_only_n,
+		params->rtt_sounding_precision == BT_CONN_LE_CS_RTT_SOUNDING_NOT_SUPP ? "No"
+										      : "Yes",
+		params->rtt_sounding_precision == BT_CONN_LE_CS_RTT_SOUNDING_10NS ? "Yes" : "No",
+		params->rtt_sounding_n,
+		params->rtt_random_payload_precision == BT_CONN_LE_CS_RTT_RANDOM_PAYLOAD_NOT_SUPP
+			? "No"
+			: "Yes",
+		params->rtt_random_payload_precision == BT_CONN_LE_CS_RTT_RANDOM_PAYLOAD_10NS
+			? "Yes"
+			: "No",
+		params->rtt_random_payload_n,
+		params->phase_based_nadm_sounding_supported ? "Yes" : "No",
+		params->phase_based_nadm_random_supported ? "Yes" : "No",
+		params->cs_sync_2m_phy_supported ? "Yes" : "No",
+		params->cs_sync_2m_2bt_phy_supported ? "Yes" : "No",
+		params->cs_without_fae_supported ? "Yes" : "No",
+		params->chsel_alg_3c_supported ? "Yes" : "No",
+		params->pbr_from_rtt_sounding_seq_supported ? "Yes" : "No",
+		params->t_ip1_times_supported, params->t_ip2_times_supported,
+		params->t_fcs_times_supported, params->t_pm_times_supported, params->t_sw_time,
+		params->tx_snr_capability);
+}
+
+void print_remote_cs_fae_table(struct bt_conn *conn, struct bt_conn_le_cs_fae_table *params)
+{
+	shell_print(ctx_shell, "Received FAE Table: ");
+	shell_hexdump(ctx_shell, params->remote_fae_table, 72);
+}
+
+static void le_cs_config_created(struct bt_conn *conn, struct bt_conn_le_cs_config *config)
+{
+	const char *mode_str[5] = {"Unused", "1 (RTT)", "2 (PBR)", "3 (RTT + PBR)", "Invalid"};
+	const char *role_str[3] = {"Initiator", "Reflector", "Invalid"};
+	const char *rtt_type_str[8] = {"AA only",        "32-bit sounding", "96-bit sounding",
+				       "32-bit random",  "64-bit random",   "96-bit random",
+				       "128-bit random", "Invalid"};
+	const char *phy_str[4] = {"Invalid", "LE 1M PHY", "LE 2M PHY", "LE 2M 2BT PHY"};
+	const char *chsel_type_str[3] = {"Algorithm #3b", "Algorithm #3c", "Invalid"};
+	const char *ch3c_shape_str[3] = {"Hat shape", "X shape", "Invalid"};
+
+	uint8_t main_mode_idx = config->main_mode_type > 0 && config->main_mode_type < 4
+					? config->main_mode_type
+					: 4;
+	uint8_t sub_mode_idx = config->sub_mode_type < 4 ? config->sub_mode_type : 0;
+	uint8_t role_idx = MIN(config->role, 2);
+	uint8_t rtt_type_idx = MIN(config->rtt_type, 7);
+	uint8_t phy_idx =
+		config->cs_sync_phy > 0 && config->cs_sync_phy < 4 ? config->cs_sync_phy : 0;
+	uint8_t chsel_type_idx = MIN(config->channel_selection_type, 2);
+	uint8_t ch3c_shape_idx = MIN(config->ch3c_shape, 2);
+
+	shell_print(ctx_shell,
+		    "New CS config created:\n"
+		    "- ID: %d\n"
+		    "- Role: %s\n"
+		    "- Main mode: %s\n"
+		    "- Sub mode: %s\n"
+		    "- RTT type: %s\n"
+		    "- Main mode steps: %d - %d\n"
+		    "- Main mode repetition: %d\n"
+		    "- Mode 0 steps: %d\n"
+		    "- CS sync PHY: %s\n"
+		    "- T_IP1 time: %d\n"
+		    "- T_IP2 time: %d\n"
+		    "- T_FCS time: %d\n"
+		    "- T_PM time: %d\n"
+		    "- Channel map: 0x%08X%08X%04X\n"
+		    "- Channel map repetition: %d\n"
+		    "- Channel selection type: %s\n"
+		    "- Ch3c shape: %s\n"
+		    "- Ch3c jump: %d\n",
+		    config->id, role_str[role_idx], mode_str[main_mode_idx], mode_str[sub_mode_idx],
+		    rtt_type_str[rtt_type_idx], config->min_main_mode_steps,
+		    config->max_main_mode_steps, config->main_mode_repetition, config->mode_0_steps,
+		    phy_str[phy_idx], config->t_ip1_time_us, config->t_ip2_time_us,
+		    config->t_fcs_time_us, config->t_pm_time_us,
+		    sys_get_le32(&config->channel_map[6]), sys_get_le32(&config->channel_map[2]),
+		    sys_get_le16(&config->channel_map[0]), config->channel_map_repetition,
+		    chsel_type_str[chsel_type_idx], ch3c_shape_str[ch3c_shape_idx],
+		    config->ch3c_jump);
+}
+
+static void le_cs_config_removed(struct bt_conn *conn, uint8_t config_id)
+{
+	shell_print(ctx_shell, "CS config %d is removed", config_id);
+}
+#endif
+
 static struct bt_conn_cb conn_callbacks = {
 	.connected = connected,
 	.disconnected = disconnected,
@@ -1010,6 +1140,12 @@ static struct bt_conn_cb conn_callbacks = {
 #endif
 #if defined(CONFIG_BT_SUBRATING)
 	.subrate_changed = subrate_changed,
+#endif
+#if defined(CONFIG_BT_CHANNEL_SOUNDING)
+	.le_cs_remote_capabilities_available = print_remote_cs_capabilities,
+	.le_cs_remote_fae_table_available = print_remote_cs_fae_table,
+	.le_cs_config_created = le_cs_config_created,
+	.le_cs_config_removed = le_cs_config_removed,
 #endif
 };
 #endif /* CONFIG_BT_CONN */

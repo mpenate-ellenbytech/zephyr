@@ -259,12 +259,25 @@ class NrfBinaryRunner(ZephyrBinaryRunner):
         if self.family in ('NRF54H_FAMILY', 'NRF92_FAMILY'):
             erase_arg = 'ERASE_NONE'
 
-            cpuapp = self.build_conf.getboolean('CONFIG_SOC_NRF54H20_CPUAPP') or self.build_conf.getboolean('CONFIG_SOC_NRF9280_CPUAPP')
-            cpurad = self.build_conf.getboolean('CONFIG_SOC_NRF54H20_CPURAD') or self.build_conf.getboolean('CONFIG_SOC_NRF9280_CPURAD')
+            cpuapp = (
+                self.build_conf.getboolean('CONFIG_SOC_NRF54H20_CPUAPP') or
+                self.build_conf.getboolean('CONFIG_SOC_NRF54H20_ENGB_CPUAPP') or
+                self.build_conf.getboolean('CONFIG_SOC_NRF9280_CPUAPP')
+            )
+            cpurad = (
+                self.build_conf.getboolean('CONFIG_SOC_NRF54H20_CPURAD') or
+                self.build_conf.getboolean('CONFIG_SOC_NRF54H20_ENGB_CPURAD') or
+                self.build_conf.getboolean('CONFIG_SOC_NRF9280_CPURAD')
+            )
 
             if self.erase:
                 self.exec_op('erase', core='NRFDL_DEVICE_CORE_APPLICATION')
                 self.exec_op('erase', core='NRFDL_DEVICE_CORE_NETWORK')
+                # A reset is needed if repartitioning the device memory
+                self.reset_target()
+            else:
+                # Ensure that firmware is not executing while erasing/programming
+                self.exec_op("reset", option="RESET_VIA_SECDOM")
 
             # Manage SUIT artifacts.
             # This logic should be executed only once per build.
@@ -290,16 +303,8 @@ class NrfBinaryRunner(ZephyrBinaryRunner):
                     self.op_program(app_root_envelope_hex_file, 'ERASE_NONE', None, defer=True, core='NRFDL_DEVICE_CORE_APPLICATION')
 
             if cpuapp:
-                if not self.erase and self.build_conf.getboolean('CONFIG_NRF_REGTOOL_GENERATE_UICR'):
-                    self.exec_op('erase', core='NRFDL_DEVICE_CORE_APPLICATION',
-                                 option={'chip_erase_mode': 'ERASE_UICR',
-                                         'qspi_erase_mode': 'ERASE_NONE'})
                 core = 'NRFDL_DEVICE_CORE_APPLICATION'
             elif cpurad:
-                if not self.erase and self.build_conf.getboolean('CONFIG_NRF_REGTOOL_GENERATE_UICR'):
-                    self.exec_op('erase', core='NRFDL_DEVICE_CORE_NETWORK',
-                                 option={'chip_erase_mode': 'ERASE_UICR',
-                                         'qspi_erase_mode': 'ERASE_NONE'})
                 core = 'NRFDL_DEVICE_CORE_NETWORK'
         else:
             if self.erase:

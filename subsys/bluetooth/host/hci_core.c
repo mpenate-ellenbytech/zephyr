@@ -605,7 +605,7 @@ static void hci_num_completed_packets(struct net_buf *buf)
 			atomic_dec(&conn->in_ll);
 
 			/* TX context free + callback happens in there */
-			k_work_submit(&conn->tx_complete_work);
+			bt_conn_tx_notify(conn, false);
 		}
 
 		bt_conn_unref(conn);
@@ -2821,6 +2821,33 @@ static const struct event_handler meta_events[] = {
 		      sizeof(struct bt_hci_evt_le_enh_conn_complete_v2)),
 #endif /* CONFIG_BT_PER_ADV_RSP || CONFIG_BT_PER_ADV_SYNC_RSP */
 #endif /* CONFIG_BT_CONN */
+#if defined(CONFIG_BT_CHANNEL_SOUNDING)
+	EVENT_HANDLER(BT_HCI_EVT_LE_CS_READ_REMOTE_SUPPORTED_CAPABILITIES_COMPLETE,
+		      bt_hci_le_cs_read_remote_supported_capabilities_complete,
+		      sizeof(struct bt_hci_evt_le_cs_read_remote_supported_capabilities_complete)),
+	EVENT_HANDLER(BT_HCI_EVT_LE_CS_READ_REMOTE_FAE_TABLE_COMPLETE,
+		      bt_hci_le_cs_read_remote_fae_table_complete,
+		      sizeof(struct bt_hci_evt_le_cs_read_remote_fae_table_complete)),
+	EVENT_HANDLER(BT_HCI_EVT_LE_CS_CONFIG_COMPLETE, bt_hci_le_cs_config_complete_event,
+		      sizeof(struct bt_hci_evt_le_cs_config_complete)),
+	EVENT_HANDLER(BT_HCI_EVT_LE_CS_SECURITY_ENABLE_COMPLETE,
+			  bt_hci_le_cs_security_enable_complete,
+			  sizeof(struct bt_hci_evt_le_cs_security_enable_complete)),
+	EVENT_HANDLER(BT_HCI_EVT_LE_CS_PROCEDURE_ENABLE_COMPLETE,
+			  bt_hci_le_cs_procedure_enable_complete,
+			  sizeof(struct bt_hci_evt_le_cs_procedure_enable_complete)),
+	EVENT_HANDLER(BT_HCI_EVT_LE_CS_SUBEVENT_RESULT,
+		      bt_hci_le_cs_subevent_result,
+		      sizeof(struct bt_hci_evt_le_cs_subevent_result)),
+	EVENT_HANDLER(BT_HCI_EVT_LE_CS_SUBEVENT_RESULT_CONTINUE,
+		      bt_hci_le_cs_subevent_result_continue,
+		      sizeof(struct bt_hci_evt_le_cs_subevent_result_continue)),
+#if defined(CONFIG_BT_CHANNEL_SOUNDING_TEST)
+	EVENT_HANDLER(BT_HCI_EVT_LE_CS_TEST_END_COMPLETE,
+		      bt_hci_le_cs_test_end_complete,
+		      sizeof(struct bt_hci_evt_le_cs_test_end_complete)),
+#endif /* CONFIG_BT_CHANNEL_SOUNDING_TEST */
+#endif /* CONFIG_BT_CHANNEL_SOUNDING */
 
 };
 
@@ -3391,6 +3418,19 @@ static int le_set_event_mask(void)
 		mask |= BT_EVT_MASK_LE_ENH_CONN_COMPLETE_V2;
 	}
 
+
+	if (IS_ENABLED(CONFIG_BT_CHANNEL_SOUNDING) &&
+	    BT_FEAT_LE_CHANNEL_SOUNDING(bt_dev.le.features)) {
+		mask |= BT_EVT_MASK_LE_CS_READ_REMOTE_SUPPORTED_CAPABILITIES_COMPLETE;
+		mask |= BT_EVT_MASK_LE_CS_READ_REMOTE_FAE_TABLE_COMPLETE;
+		mask |= BT_EVT_MASK_LE_CS_CONFIG_COMPLETE;
+		mask |= BT_EVT_MASK_LE_CS_SECURITY_ENABLE_COMPLETE;
+		mask |= BT_EVT_MASK_LE_CS_PROCEDURE_ENABLE_COMPLETE;
+		mask |= BT_EVT_MASK_LE_CS_SUBEVENT_RESULT;
+		mask |= BT_EVT_MASK_LE_CS_SUBEVENT_RESULT_CONTINUE;
+		mask |= BT_EVT_MASK_LE_CS_TEST_END_COMPLETE;
+	}
+
 	sys_put_le64(mask, cp_mask->events);
 	return bt_hci_cmd_send_sync(BT_HCI_OP_LE_SET_EVENT_MASK, buf, NULL);
 }
@@ -3608,6 +3648,14 @@ static int le_init(void)
 	    BT_FEAT_LE_CONN_SUBRATING(bt_dev.le.features)) {
 		/* Connection Subrating (Host Support) */
 		err = le_set_host_feature(BT_LE_FEAT_BIT_CONN_SUBRATING_HOST_SUPP, 1);
+		if (err) {
+			return err;
+		}
+	}
+
+	if (IS_ENABLED(CONFIG_BT_CHANNEL_SOUNDING) &&
+	    BT_FEAT_LE_CHANNEL_SOUNDING(bt_dev.le.features)) {
+		err = le_set_host_feature(BT_LE_FEAT_BIT_CHANNEL_SOUNDING_HOST, 1);
 		if (err) {
 			return err;
 		}
