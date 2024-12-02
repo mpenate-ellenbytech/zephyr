@@ -92,10 +92,13 @@ enum modem_cellular_state {
 	MODEM_CELLULAR_STATE_POWER_ON_PULSE,
 	MODEM_CELLULAR_STATE_AWAIT_POWER_ON,
 	MODEM_CELLULAR_STATE_SET_BAUDRATE,
+	MODEM_CELLULAR_STATE_SET_SIM,
 	MODEM_CELLULAR_STATE_RUN_INIT_SCRIPT,
 	MODEM_CELLULAR_STATE_CONNECT_CMUX,
 	MODEM_CELLULAR_STATE_OPEN_DLCI1,
 	MODEM_CELLULAR_STATE_OPEN_DLCI2,
+	MODEM_CELLULAR_STATE_SET_APN,
+	MODEM_CELLULAR_STATE_AWAIT_REGISTRATION,
 	MODEM_CELLULAR_STATE_RUN_DIAL_SCRIPT,
 	MODEM_CELLULAR_STATE_AWAIT_REGISTERED,
 	MODEM_CELLULAR_STATE_CARRIER_ON,
@@ -103,6 +106,11 @@ enum modem_cellular_state {
 	MODEM_CELLULAR_STATE_RUN_SHUTDOWN_SCRIPT,
 	MODEM_CELLULAR_STATE_POWER_OFF_PULSE,
 	MODEM_CELLULAR_STATE_AWAIT_POWER_OFF,
+};
+
+enum modem_cellular_sim_slot {
+	MODEM_CELLULAR_SIM_SLOT_PRIMARY = 0,
+	MODEM_CELLULAR_SIM_SLOT_SECONDARY,
 };
 
 // static const char *modem_cellular_state_str(enum modem_cellular_state state)
@@ -119,6 +127,8 @@ static inline const char *cellular_modem_state_str(enum modem_cellular_state sta
 		return "await power on";
 	case MODEM_CELLULAR_STATE_SET_BAUDRATE:
 		return "set baudrate";
+	case MODEM_CELLULAR_STATE_SET_SIM:
+		return "set sim";
 	case MODEM_CELLULAR_STATE_RUN_INIT_SCRIPT:
 		return "run init script";
 	case MODEM_CELLULAR_STATE_CONNECT_CMUX:
@@ -127,10 +137,14 @@ static inline const char *cellular_modem_state_str(enum modem_cellular_state sta
 		return "open dlci1";
 	case MODEM_CELLULAR_STATE_OPEN_DLCI2:
 		return "open dlci2";
-	case MODEM_CELLULAR_STATE_AWAIT_REGISTERED:
-		return "await registered";
+	case MODEM_CELLULAR_STATE_SET_APN:
+		return "set apn";
+	case MODEM_CELLULAR_STATE_AWAIT_REGISTRATION:
+		return "await registration";
 	case MODEM_CELLULAR_STATE_RUN_DIAL_SCRIPT:
 		return "run dial script";
+	case MODEM_CELLULAR_STATE_AWAIT_REGISTERED:
+		return "await registered";
 	case MODEM_CELLULAR_STATE_CARRIER_ON:
 		return "carrier on";
 	case MODEM_CELLULAR_STATE_INIT_POWER_OFF:
@@ -173,6 +187,12 @@ typedef int (*cellular_api_get_registration_status)(const struct device *dev,
 /** API for getting modem state */
 typedef int (*cellular_api_get_modem_state)(const struct device *dev, enum modem_cellular_state *state);
 
+/** API for setting modem sim slot */
+typedef int (*cellular_api_set_sim_slot)(const struct device *dev, enum modem_cellular_sim_slot slot);
+
+/** API for getting modem sim slot */
+typedef int (*cellular_api_get_sim_slot)(const struct device *dev, enum modem_cellular_sim_slot *slot);
+
 /** Cellular driver API */
 __subsystem struct cellular_driver_api {
 	cellular_api_configure_networks configure_networks;
@@ -181,6 +201,8 @@ __subsystem struct cellular_driver_api {
 	cellular_api_get_modem_info get_modem_info;
 	cellular_api_get_registration_status get_registration_status;
 	cellular_api_get_modem_state get_modem_state;
+	cellular_api_set_sim_slot set_modem_sim_slot;
+	cellular_api_get_sim_slot get_modem_sim_slot;
 };
 
 /**
@@ -323,6 +345,26 @@ static inline int cellular_get_modem_state(const struct device *dev, enum modem_
 	}
 
 	return api->get_modem_state(dev, state);
+}
+
+static inline int cellular_set_sim_slot(const struct device *dev, enum modem_cellular_sim_slot slot) {
+	const struct cellular_driver_api *api = (const struct cellular_driver_api *)dev->api;
+
+	if (api->set_modem_sim_slot == NULL) {
+		return -ENOSYS;
+	}
+
+	return api->set_modem_sim_slot(dev, slot);
+}
+
+static inline int cellular_get_sim_slot(const struct device *dev, enum modem_cellular_sim_slot * slot) {
+	const struct cellular_driver_api *api = (const struct cellular_driver_api *)dev->api;
+
+	if (api->get_modem_sim_slot == NULL) {
+		return -ENOSYS;
+	}
+
+	return api->get_modem_sim_slot(dev, slot);
 }
 
 #ifdef __cplusplus

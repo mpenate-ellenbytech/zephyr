@@ -30,9 +30,18 @@ config MODEM_CELLULAR
 
 if MODEM_CELLULAR
 
-config MODEM_CELLULAR_APN
-	string "APN"
+config MODEM_CELLULAR_APN_PRIMARY
+	string "APN Primary"
 	default "internet"
+
+config MODEM_CELLULAR_APN_SECONDARY
+	string "APN Primary"
+	default "internet"
+
+config MODEM_CELLULAR_NEW_SIM_DELAY
+	int "Time modem takes to change sim, in milliseconds"
+	range 0 15000
+	default 1500
 
 config MODEM_CELLULAR_PERIODIC_SCRIPT_MS
 	int "Periodic script interval in milliseconds"
