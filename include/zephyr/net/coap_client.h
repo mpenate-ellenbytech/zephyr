@@ -171,7 +171,7 @@ void coap_client_cancel_requests(struct coap_client *client);
  * @param client Pointer to the CoAP client instance.
  * @param req Pointer to the CoAP client request to be canceled.
  */
-void coap_client_cancel_request(struct coap_client *client, struct coap_client_request *req);
+void coap_client_cancel_request(struct coap_client *client, struct coap_client_request *req, bool fully_reset_request);
 
 /**
  * @brief Initialise a Block2 option to be added to a request
