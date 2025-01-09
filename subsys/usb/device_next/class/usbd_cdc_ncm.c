@@ -1080,7 +1080,10 @@ static int cdc_ncm_send(const struct device *dev, struct net_pkt *const pkt)
 	}
 
 	usbd_ep_enqueue(c_data, buf);
-	k_sem_take(&data->sync_sem, K_FOREVER);
+	
+	if (k_sem_take(&data->sync_sem, K_MSEC(1000))) {
+		usbd_ep_dequeue(usbd_class_get_ctx(c_data), udc_get_buf_info(buf)->ep);
+	}
 
 	net_buf_unref(buf);
 
